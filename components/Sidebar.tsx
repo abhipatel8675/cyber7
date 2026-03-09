@@ -25,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
   const renderIcon = (item: any, isActive: boolean = false) => {
     const iconProps = {
       size: 22,
-      color: isActive ? '#4A90E2' : theme.colors.text,
+      color: isActive ? theme.colors.action : theme.colors.textPrimary,
     };
 
     switch (item.iconType) {
@@ -49,21 +49,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
   if (!isOpen) return null;
 
   return (
-    <View style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}>
-      <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
-        <View style={[styles.logoContainer, { backgroundColor: theme.colors.primary }]}>
+    <View style={[styles.overlay, { backgroundColor: theme.colors.bgTertiary }]}>
+      <View style={[styles.sidebar, { backgroundColor: theme.colors.bgSecondary }]}>
+        <View style={[styles.logoContainer, { backgroundColor: theme.colors.actionLight, borderBottomColor: theme.colors.bgTertiary }]}>
           <View style={styles.logoContent}>
-            <MaterialIcons name="security" size={24} color="#4A90E2" />
+            <MaterialIcons name="security" size={24} color={theme.colors.action} />
             <View style={styles.logoTextContainer}>
-              <Text style={[styles.logoMainText, { color: '#ffffff' }]}>SecureNotify</Text>
-              <Text style={[styles.logoSubText, { color: '#4A90E2' }]}>ALERT SYSTEM</Text>
+              <Text style={[styles.logoMainText, { color: theme.colors.action }]}>SecureNotify</Text>
+              <Text style={[styles.logoSubText, { color: theme.colors.bgTertiary }]}>ALERT SYSTEM</Text>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <MaterialIcons 
               name="close" 
               size={20} 
-              color={theme.colors.text}
+              color={theme.colors.textPrimary}
             />
           </TouchableOpacity>
         </View>
@@ -77,8 +77,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
                 style={[
                   styles.menuItem, 
                   { 
-                    borderBottomColor: theme.colors.border,
-                    backgroundColor: isActive ? '#4A90E2' : 'transparent',
+                    borderBottomColor: theme.colors.bgTertiary,
+                    backgroundColor: isActive ? theme.colors.actionLight : 'transparent',
                   }
                 ]}
                 onPress={() => onMenuSelect && onMenuSelect(item.title)}
@@ -89,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
                 <Text style={[
                   styles.menuText, 
                   { 
-                    color: isActive ? '#ffffff' : theme.colors.text,
+                    color: isActive ? theme.colors.action : theme.colors.textPrimary,
                     fontWeight: isActive ? '600' : '400'
                   }
                 ]}>
@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(74, 144, 226, 0.2)',
   },
   logoContent: {
     flexDirection: 'row',

@@ -34,7 +34,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
 
   return (
     <View style={[styles.container, { 
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.bgPrimary,
       paddingTop: insets.top,
       paddingBottom: insets.bottom,
       paddingLeft: insets.left,
@@ -57,10 +57,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
       </View>
       
       <TouchableOpacity style={[styles.chatButton, { 
-        backgroundColor: theme.colors.primary,
+        backgroundColor: theme.colors.bgPrimary,
+        borderColor: theme.colors.textPrimary,
         bottom: 20 + insets.bottom,
       }]}>
-        <Text style={styles.chatButtonText}>Chat to Edit</Text>
+        <Text style={[styles.chatButtonText, { color: theme.colors.textPrimary }]}>Chat to Edit</Text>
       </TouchableOpacity>
     </View>
   );
@@ -84,7 +85,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -92,8 +92,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   chatButtonText: {
-    color: '#ffffff',
-    marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
   },

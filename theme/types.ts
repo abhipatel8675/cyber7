@@ -1,23 +1,27 @@
 export interface ThemeColors {
-  // Primary colors
-  primary: string;
-  secondary: string;
-  background: string;
-  surface: string;
-  
   // Text colors
-  text: string;
+  textPrimary: string;
   textSecondary: string;
+  textTertiary: string;
   
-  // UI elements
-  border: string;
-  shadow: string;
-  overlay: string;
+  // Background colors
+  bgPrimary: string;
+  bgSecondary: string;
+  bgTertiary: string;
   
-  // Status colors
+  // Action colors (light backgrounds)
+  actionLight: string;
+  successLight: string;
+  warningLight: string;
+  dangerLight: string;
+  purpleLight: string;
+
+  // Action text colors (dark text)
+  action: string;
   success: string;
   warning: string;
-  error: string;
+  danger: string;
+  purple: string;
 }
 
 export interface Theme {

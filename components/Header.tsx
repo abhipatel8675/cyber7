@@ -11,16 +11,16 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <View style={[styles.header, { backgroundColor: theme.colors.primary, borderBottomColor: theme.colors.border }]}>
+    <View style={[styles.header, { backgroundColor: theme.colors.bgSecondary, borderBottomColor: theme.colors.bgTertiary }]}>
       <TouchableOpacity onPress={onToggleSidebar} style={styles.toggleButton}>
         <MaterialIcons 
           name="menu" 
           size={24} 
-          color={theme.colors.text}
+          color={theme.colors.textPrimary}
         />
       </TouchableOpacity>
       
-      <Text style={[styles.headerTitle, { color: theme.colors.text }]}>CyberApp</Text>
+      <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>CyberApp</Text>
       
       <View style={styles.rightContainer}>
         <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
@@ -28,13 +28,13 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             <Feather 
               name="moon" 
               size={20} 
-              color={theme.colors.text}
+              color={theme.colors.textPrimary}
             />
           ) : (
             <Feather 
               name="sun" 
               size={20} 
-              color={theme.colors.text}
+              color={theme.colors.textPrimary}
             />
           )}
         </TouchableOpacity>
@@ -42,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         <View style={styles.profileContainer}>
           <Image 
             source={{ uri: 'https://picsum.photos/seed/profile/40/40.jpg' }} 
-            style={[styles.profileImage, { borderColor: theme.colors.border }]}
+            style={[styles.profileImage, { borderColor: theme.colors.bgTertiary }]}
           />
         </View>
       </View>
