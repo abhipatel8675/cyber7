@@ -42,14 +42,14 @@ export const lightTheme: Theme = {
     // Action colors (light backgrounds)
     actionLight: "#FFFFFF",
     successLight: "#d4edda",
-    warningLight: "#fff3cd",
+    warningLight: "#cead90",
     dangerLight: "#f8d7da",
     purpleLight: "#c0aedd",
 
     // Action text colors (dark text)
     action: "#007bff",
     success: "#13e644",
-    warning: "#f5bd05",
+    warning: "#e26f0a",
     danger: "#e4071a",
     purple: "#671fda",
   },
@@ -71,13 +71,13 @@ export const darkTheme: Theme = {
     // Action colors (light backgrounds)
     actionLight: "#bbcfe4",
     successLight: "#d4edda",
-    warningLight: "#fff3cd",
+    warningLight: "#cead90",
     dangerLight: "#f8d7da",
     purpleLight: "#c0aedd",
     // Action text colors (dark text)
     action: "#007bff",
     success: "#13e644",
-    warning: "#f5bd05",
+    warning: "#e26f0a",
     danger: "#e4071a",
     purple: "#671fda",
   },

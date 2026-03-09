@@ -25,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
   const renderIcon = (item: any, isActive: boolean = false) => {
     const iconProps = {
       size: 22,
-      color: isActive ? theme.colors.action : theme.colors.textPrimary,
+      color: theme.colors.textPrimary,
     };
 
     switch (item.iconType) {
@@ -51,12 +51,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
   return (
     <View style={[styles.overlay, { backgroundColor: theme.colors.bgTertiary }]}>
       <View style={[styles.sidebar, { backgroundColor: theme.colors.bgSecondary }]}>
-        <View style={[styles.logoContainer, { backgroundColor: theme.colors.actionLight, borderBottomColor: theme.colors.bgTertiary }]}>
+        <View style={[styles.logoContainer, {  borderBottomColor: theme.colors.bgTertiary }]}>
           <View style={styles.logoContent}>
             <MaterialIcons name="security" size={24} color={theme.colors.action} />
             <View style={styles.logoTextContainer}>
-              <Text style={[styles.logoMainText, { color: theme.colors.action }]}>SecureNotify</Text>
-              <Text style={[styles.logoSubText, { color: theme.colors.bgTertiary }]}>ALERT SYSTEM</Text>
+              <Text style={[styles.logoMainText, { color: theme.colors.textPrimary }]}>SecureNotify</Text>
+              <Text style={[styles.logoSubText, { color: theme.colors.textSecondary }]}>ALERT SYSTEM</Text>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
                   styles.menuItem, 
                   { 
                     borderBottomColor: theme.colors.bgTertiary,
-                    backgroundColor: isActive ? theme.colors.actionLight : 'transparent',
+                    backgroundColor: isActive ? theme.colors.action : 'transparent',
                   }
                 ]}
                 onPress={() => onMenuSelect && onMenuSelect(item.title)}
@@ -89,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashbo
                 <Text style={[
                   styles.menuText, 
                   { 
-                    color: isActive ? theme.colors.action : theme.colors.textPrimary,
+                    color: theme.colors.textPrimary,
                     fontWeight: isActive ? '600' : '400'
                   }
                 ]}>
@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   logoMainText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
   logoSubText: {
     fontSize: 10,

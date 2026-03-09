@@ -90,16 +90,40 @@ const DashboardContent: React.FC = () => {
     },
   ];
 
-  const pieData = [
+  const notifications = [
     {
-      value: 75,
+      id: 1,
+      userName: "Steve Theoden",
+      message: "Completed security audit",
+      status: "success",
       color: theme.colors.danger,
-      text: "75%",
     },
+    {
+      id: 2,
+      userName: "Steve Theoden", 
+      message: "Updated firewall settings",
+      status: "success",
+      color: theme.colors.warning,
+    },
+    {
+      id: 3,
+      userName: "Sarah Johnson",
+      message: "System maintenance completed",
+      status: "success",
+      color: theme.colors.info,
+    },
+  ];
+
+  const pieData = [
     {
       value: 25,
       color: theme.colors.warning,
       text: "25%",
+    },
+    {
+      value: 75,
+      color: theme.colors.danger,
+      text: "75%",
     },
   ];
 
@@ -236,13 +260,13 @@ const DashboardContent: React.FC = () => {
                           {
                             backgroundColor:
                               alert.severity === "critical"
-                                ? theme.colors.danger
-                                : theme.colors.warning,
+                                ? theme.colors.danger + '20'
+                                : theme.colors.warning + '20',
                             borderColor:
                               alert.severity === "critical"
                                 ? theme.colors.danger
                                 : theme.colors.warning,
-                            opacity: 0.8,
+                            borderWidth: 1,
                           },
                         ]}
                       >
@@ -273,13 +297,17 @@ const DashboardContent: React.FC = () => {
                         <View
                           style={[
                             styles.newBadge,
-                            { backgroundColor: theme.colors.action },
+                            { 
+                              backgroundColor: theme.colors.action + '20',
+                              borderColor: theme.colors.action,
+                              borderWidth: 1,
+                            }
                           ]}
                         >
                           <Text
                             style={[
                               styles.newBadgeText,
-                              { color: theme.colors.actionLight },
+                              { color: theme.colors.action }
                             ]}
                           >
                             New
@@ -323,6 +351,7 @@ const DashboardContent: React.FC = () => {
               donut
               radius={60}
               innerRadius={35}
+              innerCircleColor={theme.colors.bgSecondary}
             />
             <View style={styles.chartLegend}>
               <View style={styles.legendItem}>
@@ -392,54 +421,46 @@ const DashboardContent: React.FC = () => {
 
         <Card.Section>
           <View style={styles.notificationsList}>
-            <View style={styles.notificationItem}>
-              <View
-                style={[
-                  styles.notificationDot,
-                  { backgroundColor: theme.colors.danger },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.notificationText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Critical alert threshold exceeded
-              </Text>
-            </View>
-            <View style={styles.notificationItem}>
-              <View
-                style={[
-                  styles.notificationDot,
-                  { backgroundColor: theme.colors.warning },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.notificationText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                High priority task assigned
-              </Text>
-            </View>
-            <View style={styles.notificationItem}>
-              <View
-                style={[
-                  styles.notificationDot,
-                  { backgroundColor: theme.colors.info },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.notificationText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                System update completed
-              </Text>
-            </View>
+            {notifications.map((notification) => (
+              <View key={notification.id} style={styles.notificationItem}>
+                <View style={styles.notificationContent}>
+                  <View style={styles.notificationLeft}>
+                    <Text
+                      style={[
+                        styles.userName,
+                        { color: theme.colors.textPrimary },
+                      ]}
+                    >
+                      {notification.userName}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.notificationMessage,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                    >
+                      {notification.message}
+                    </Text>
+                  </View>
+                  <View style={styles.notificationRight}>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: theme.colors.success + '20',
+                        borderColor: theme.colors.success,
+                        borderWidth: 1,
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.statusText,
+                        { color: theme.colors.successLight }
+                      ]}>
+                        sent
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
           </View>
         </Card.Section>
       </Card>
@@ -699,7 +720,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "white",
+    backgroundColor: "transparent",
   },
   chartLegend: {
     paddingLeft: 20,
@@ -731,19 +752,47 @@ const styles = StyleSheet.create({
   notificationsList: {
     gap: 12,
   },
-  notificationItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   notificationDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 12,
+    marginTop: 6,
   },
-  notificationText: {
-    fontSize: 14,
+  notificationItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  notificationContent: {
     flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginLeft: 12,
+  },
+  notificationLeft: {
+    flex: 1,
+  },
+  notificationRight: {
+    alignItems: "flex-end",
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  notificationMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
 

@@ -51,11 +51,11 @@ const ContactsContent: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.bgPrimary }]}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Contacts</Text>
-          <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.primary }]}>
+          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Contacts</Text>
+          <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.warning }]}>
             <MaterialIcons name="add" size={20} color="#ffffff" />
             <Text style={styles.addButtonText}>Add Contact</Text>
           </TouchableOpacity>
@@ -66,10 +66,10 @@ const ContactsContent: React.FC = () => {
         </Text>
 
         <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.searchInputContainer, { backgroundColor: theme.colors.bgSecondary }]}>
             <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />
             <TextInput
-              style={[styles.searchInput, { color: theme.colors.text }]}
+              style={[styles.searchInput, { color: theme.colors.textPrimary }]}
               placeholder="Search contacts..."
               placeholderTextColor={theme.colors.textSecondary}
               value={searchText}
@@ -77,8 +77,8 @@ const ContactsContent: React.FC = () => {
             />
           </View>
           
-          <TouchableOpacity style={[styles.dropdownButton, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{selectedCompany}</Text>
+          <TouchableOpacity style={[styles.dropdownButton, { backgroundColor: theme.colors.bgSecondary }]}>
+            <Text style={[styles.dropdownText, { color: theme.colors.textPrimary }]}>{selectedCompany}</Text>
             <MaterialIcons name="keyboard-arrow-down" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -87,27 +87,36 @@ const ContactsContent: React.FC = () => {
 
         <View style={styles.contactsList}>
           {contacts.map((contact) => (
-            <View key={contact.id} style={[styles.contactCard, { backgroundColor: theme.colors.surface }]}>
+            <View key={contact.id} style={[styles.contactCard, { backgroundColor: theme.colors.bgSecondary }]}>
               <View style={styles.contactMain}>
                 <View style={styles.contactLeft}>
-                  <View style={[styles.initialCircle, { backgroundColor: theme.colors.primary }]}>
-                    <Text style={styles.initialText}>{getInitials(contact.name)}</Text>
+                  <View style={[styles.initialCircle, { backgroundColor: theme.colors.bgPrimary }]}>
+                    <Text style={[styles.initialText, { color: theme.colors.warning }]}>{getInitials(contact.name)}</Text>
                   </View>
                   <View style={styles.contactInfo}>
                     <View style={styles.nameRow}>
-                      <Text style={[styles.contactName, { color: theme.colors.text }]}>{contact.name}</Text>
+                      <Text style={[styles.contactName, { color: theme.colors.textPrimary }]}>{contact.name}</Text>
                       {contact.starred && (
-                        <MaterialIcons name="star" size={16} color={theme.colors.primary} />
+                        <MaterialIcons name="star" size={16} color={theme.colors.warning} />
                       )}
                     </View>
-                    <Text style={[styles.contactEmail, { color: theme.colors.textSecondary }]}>{contact.email}</Text>
-                    <Text style={[styles.contactPhone, { color: theme.colors.textSecondary }]}>{contact.phone}</Text>
+                    <View style={styles.contactDetails}>
+                      <View style={styles.detailRow}>
+                        <MaterialIcons name="email" size={16} color={theme.colors.textSecondary} />
+                        <Text style={[styles.contactEmail, { color: theme.colors.textSecondary }]}>{contact.email}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <MaterialIcons name="phone" size={16} color={theme.colors.textSecondary} />
+                        <Text style={[styles.contactPhone, { color: theme.colors.textSecondary }]}>{contact.phone}</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </View>
             </View>
           ))}
         </View>
+        
       </ScrollView>
     </View>
   );
@@ -209,8 +218,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   initialText: {
-    color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   contactInfo: {
@@ -219,19 +227,43 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   contactName: {
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
   },
+  contactDetails: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   contactEmail: {
     fontSize: 14,
-    marginBottom: 2,
   },
   contactPhone: {
     fontSize: 14,
+  },
+  chatButtonContainer: {
+    marginTop: 20,
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  chatButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+  },
+  chatButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
