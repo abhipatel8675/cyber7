@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DashboardContent: React.FC = () => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   interface StatItem {
     title: string;
@@ -29,7 +31,13 @@ const DashboardContent: React.FC = () => {
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: 20 + insets.bottom }
+      ]}
+    >
       <Text style={[styles.title, { color: theme.colors.text }]}>Dashboard</Text>
       
       <View style={styles.statsContainer}>
@@ -37,11 +45,11 @@ const DashboardContent: React.FC = () => {
           <View key={index} style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.statMain}>
               <View style={styles.statTop}>
-                <Text style={[styles.statTitle, { color: theme.colors.text }]}>{stat.title}</Text>
+                <Text style={[styles.statTitle, { color: theme.colors.text }]} numberOfLines={2}>{stat.title}</Text>
                 <MaterialIcons name={stat.icon} size={20} color={stat.color} />
               </View>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>{stat.value}</Text>
-              <Text style={[styles.statDescription, { color: theme.colors.textSecondary }]}>{stat.description}</Text>
+              <Text style={[styles.statDescription, { color: theme.colors.textSecondary }]} numberOfLines={1}>{stat.description}</Text>
             </View>
           </View>
         ))}
@@ -101,6 +109,8 @@ const DashboardContent: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
     padding: 10,
   },
   title: {
@@ -112,16 +122,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 25,
     gap: 10,
   },
   statCard: {
-    flex: 1,
-    minWidth: '45%',
-    maxWidth: '48%',
-    padding: 15,
+    width: '48%',
+    minHeight: 100,
+    padding: 12,
     borderRadius: 10,
-    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -138,22 +146,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     flex: 1,
-    marginRight: 10,
-    flexWrap: 'wrap',
+    marginRight: 8,
+    lineHeight: 14,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 4,
-    flexShrink: 0,
   },
   statDescription: {
-    fontSize: 12,
-    flexShrink: 0,
-    flexWrap: 'wrap',
+    fontSize: 11,
+    lineHeight: 13,
   },
   alertsContainer: {
     borderRadius: 10,
