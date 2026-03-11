@@ -1,8 +1,8 @@
-import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import MainLayout from './components/MainLayout';
 import { ThemeProvider } from './theme/useTheme';
 import { useTheme } from './theme/useTheme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardContent from './components/content/DashboardContent';
 import AlertsContent from './components/content/AlertsContent';
 import ClientsContent from './components/content/ClientsContent';
@@ -41,16 +41,17 @@ const AppContent: React.FC = () => {
   return (
     <MainLayout activeMenuItem={activeMenu} onMenuSelect={handleMenuSelect}>
       {renderContent()}
-      <StatusBar style={theme.isDark ? 'light' : 'auto'} />
     </MainLayout>
   );
 };
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

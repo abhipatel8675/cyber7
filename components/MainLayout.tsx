@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { useTheme } from '../theme/useTheme';
@@ -14,6 +15,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Dashboard', onMenuSelect }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -31,7 +33,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { 
+      backgroundColor: theme.colors.background,
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+      paddingLeft: insets.left,
+      paddingRight: insets.right,
+    }]}>
+      <StatusBar 
+        barStyle={theme.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <Header onToggleSidebar={toggleSidebar} />
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -43,16 +56,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
         {children}
       </View>
       
-      <TouchableOpacity style={[styles.chatButton, { backgroundColor: theme.colors.primary }]}>
+      <TouchableOpacity style={[styles.chatButton, { 
+        backgroundColor: theme.colors.primary,
+        bottom: 20 + insets.bottom,
+      }]}>
         <Text style={styles.chatButtonText}>Chat to Edit</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   content: {
     flex: 1,
@@ -60,7 +77,6 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     position: 'absolute',
-    bottom: 20,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
