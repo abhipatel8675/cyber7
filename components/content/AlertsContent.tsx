@@ -9,35 +9,41 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
+import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import { fetchHighCriticalTickets, AlertTicket } from '../../services/connectwiseApi';
+import { fetchAlerts, type AlertTicket } from '../../services/api';
 
 const REFRESH_INTERVAL_MS = 60000; // 60 seconds
 
 const AlertsContent: React.FC = () => {
   const { theme } = useTheme();
+  const { token, logout } = useAuth();
   const [alerts, setAlerts] = useState<AlertTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAlerts = useCallback(async () => {
+    if (!token) return;
     try {
       setError(null);
-      const tickets = await fetchHighCriticalTickets();
+      const tickets = await fetchAlerts(token);
       setAlerts(tickets);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load alerts');
+      const msg = err instanceof Error ? err.message : 'Failed to load alerts';
+      setError(msg);
       setAlerts([]);
+      if (msg === 'Unauthorized') logout();
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    loadAlerts();
-  }, [loadAlerts]);
+    if (token) loadAlerts();
+    else setLoading(false);
+  }, [loadAlerts, token]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
@@ -76,7 +82,7 @@ const AlertsContent: React.FC = () => {
       <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-          Loading alerts from ConnectWise...
+          Loading alerts...
         </Text>
       </View>
     );

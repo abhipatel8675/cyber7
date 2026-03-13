@@ -5,14 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { useTheme } from '../theme/useTheme';
+import type { MenuItem } from '../contexts/menuItems';
 
 interface MainLayoutProps {
   children: React.ReactNode;
   activeMenuItem?: string;
   onMenuSelect?: (item: string) => void;
+  menuItems: MenuItem[];
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Dashboard', onMenuSelect }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Dashboard', onMenuSelect, menuItems }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -51,6 +53,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
         onClose={closeSidebar} 
         activeItem={activeMenuItem}
         onMenuSelect={handleMenuSelect}
+        menuItems={menuItems}
       />
       <View style={styles.content}>
         {children}

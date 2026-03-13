@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
+import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 
 interface SettingsItem {
@@ -18,6 +19,7 @@ interface SettingsSection {
 
 const SettingsContent: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
@@ -83,6 +85,23 @@ const SettingsContent: React.FC = () => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Text style={[styles.title, { color: theme.colors.text }]}>Settings</Text>
+
+      {user && (
+        <View style={[styles.accountSection, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.accountSectionTitle, { color: theme.colors.text }]}>Account</Text>
+          <Text style={[styles.accountEmail, { color: theme.colors.textSecondary }]}>{user.email}</Text>
+          <Text style={[styles.accountRole, { color: theme.colors.textSecondary }]}>
+            Role: {user.role}
+            {user.companyId ? ` • Company: ${user.companyId}` : ''}
+          </Text>
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: theme.colors.error }]}
+            onPress={logout}
+          >
+            <Text style={styles.logoutButtonText}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       {settingsSections.map((section, sectionIndex) => (
         <View key={sectionIndex} style={styles.section}>
@@ -174,6 +193,39 @@ const styles = StyleSheet.create({
   settingValue: {
     fontSize: 16,
     color: '#666',
+  },
+  accountSection: {
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  accountSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  accountEmail: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  accountRole: {
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  logoutButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/useTheme';
+import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { theme, toggleTheme } = useTheme();
+  const { role } = useAuth();
 
   return (
     <View style={[styles.header, { backgroundColor: theme.colors.primary, borderBottomColor: theme.colors.border }]}>
@@ -23,6 +25,9 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       <Text style={[styles.headerTitle, { color: theme.colors.text }]}>CyberApp</Text>
       
       <View style={styles.rightContainer}>
+        <View style={[styles.roleBadge, { backgroundColor: theme.colors.secondary }]}>
+          <Text style={[styles.roleBadgeText, { color: theme.colors.text }]}>{role}</Text>
+        </View>
         <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
           {theme.isDark ? (
             <Feather 
@@ -82,6 +87,17 @@ const styles = StyleSheet.create({
   themeButton: {
     padding: 8,
     marginRight: 10,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   profileContainer: {
     padding: 5,
