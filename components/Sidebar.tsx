@@ -2,25 +2,18 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { MaterialIcons, Feather, Ionicons, FontAwesome5, AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
+import type { MenuItem } from '../contexts/menuItems';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   activeItem?: string;
   onMenuSelect?: (item: string) => void;
+  menuItems: MenuItem[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashboard', onMenuSelect }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashboard', onMenuSelect, menuItems }) => {
   const { theme } = useTheme();
-  
-  const menuItems = [
-    { id: 1, title: 'Dashboard', icon: 'dashboard', iconType: 'MaterialIcons' },
-    { id: 2, title: 'Alerts', icon: 'notifications', iconType: 'MaterialIcons' },
-    { id: 3, title: 'Clients', icon: 'people', iconType: 'MaterialIcons' },
-    { id: 4, title: 'Contacts', icon: 'contacts', iconType: 'MaterialIcons' },
-    { id: 5, title: 'Notifications', icon: 'bell', iconType: 'MaterialIcons' },
-    { id: 6, title: 'Settings', icon: 'settings', iconType: 'MaterialIcons' },
-  ];
 
   const renderIcon = (item: any, isActive: boolean = false) => {
     const iconProps = {

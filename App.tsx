@@ -1,19 +1,45 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import MainLayout from './components/MainLayout';
 import { ThemeProvider } from './theme/useTheme';
 import { useTheme } from './theme/useTheme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { getMenuItemsForRole, canAccessMenu } from './contexts/menuItems';
+import AuthScreen from './components/auth/AuthScreen';
 import DashboardContent from './components/content/DashboardContent';
 import AlertsContent from './components/content/AlertsContent';
 import ClientsContent from './components/content/ClientsContent';
 import ContactsContent from './components/content/ContactsContent';
 import NotificationsContent from './components/content/NotificationsContent';
 import SettingsContent from './components/content/SettingsContent';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const AppContent: React.FC = () => {
   const { theme } = useTheme();
+  const { role, isAuthenticated, isLoading } = useAuth();
   const [activeMenu, setActiveMenu] = useState('Dashboard');
+
+  const menuItems = getMenuItemsForRole(role);
+
+  // If current role can't access active menu (e.g. switched from admin to user), go to Dashboard
+  useEffect(() => {
+    if (!canAccessMenu(activeMenu, role)) {
+      setActiveMenu('Dashboard');
+    }
+  }, [role, activeMenu]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthScreen />;
+  }
 
   const renderContent = () => {
     switch (activeMenu) {
@@ -39,7 +65,11 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <MainLayout activeMenuItem={activeMenu} onMenuSelect={handleMenuSelect}>
+    <MainLayout
+      activeMenuItem={activeMenu}
+      onMenuSelect={handleMenuSelect}
+      menuItems={menuItems}
+    >
       {renderContent()}
     </MainLayout>
   );
@@ -49,13 +79,24 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',

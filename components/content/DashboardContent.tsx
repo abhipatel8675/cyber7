@@ -1,12 +1,44 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
+import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { fetchAlerts, type AlertTicket } from '../../services/api';
+
+const RECENT_ALERTS_LIMIT = 5;
 
 const DashboardContent: React.FC = () => {
   const { theme } = useTheme();
+  const { token } = useAuth();
   const insets = useSafeAreaInsets();
+  const [alerts, setAlerts] = useState<AlertTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadAlerts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await fetchAlerts(token);
+      setAlerts(data);
+    } catch {
+      setAlerts([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) loadAlerts();
+    else setLoading(false);
+  }, [loadAlerts, token]);
+
+  const criticalCount = alerts.filter((a) => a.severity === 'critical' && a.status === 'active').length;
+  const highCount = alerts.filter((a) => a.severity === 'high' && a.status === 'active').length;
+  const activeCount = alerts.filter((a) => a.status === 'active').length;
+  const resolvedCount = alerts.filter((a) => a.status === 'resolved').length;
+  const recentAlerts = alerts.slice(0, RECENT_ALERTS_LIMIT);
 
   interface StatItem {
     title: string;
@@ -17,18 +49,23 @@ const DashboardContent: React.FC = () => {
   }
 
   const stats: StatItem[] = [
-    { title: 'CRITICAL ALERTS', value: '3', description: 'Unresolved', icon: 'shield-alert' as any, color: '#dc3545' },
-    { title: 'HIGH ALERTS', value: '1', description: 'Unresolved', icon: 'show-chart' as any, color: '#ffc107' },
-    { title: 'IN PROGRESS', value: '0', description: 'Being worked', icon: 'show-chart' as any, color: '#ffc107' },
-    { title: 'ACKNOWLEDGED', value: '0', description: 'Total', icon: 'groups' as any, color: '#9370DB' },
+    { title: 'CRITICAL ALERTS', value: String(criticalCount), description: 'Unresolved', icon: 'shield-alert' as any, color: '#dc3545' },
+    { title: 'HIGH ALERTS', value: String(highCount), description: 'Unresolved', icon: 'show-chart' as any, color: '#ffc107' },
+    { title: 'IN PROGRESS', value: String(activeCount), description: 'Being worked', icon: 'show-chart' as any, color: '#ffc107' },
+    { title: 'ACKNOWLEDGED', value: String(resolvedCount), description: 'Total', icon: 'groups' as any, color: '#9370DB' },
   ];
 
-  const recentAlerts = [
-    { id: 1, title: 'Test Alert 4', client: 'Test Client', severity: 'critical', time: '7:52 AM', isNew: true },
-    { id: 2, title: 'Test Alert 3', client: 'Test Client', severity: 'high', time: '7:45 AM', isNew: true },
-    { id: 3, title: 'Test Alert 2', client: 'Test Client', severity: 'critical', time: 'Yesterday', isNew: false },
-    { id: 4, title: 'Test Alert 1', client: 'Test Client', severity: 'high', time: 'Yesterday', isNew: false },
-  ];
+  const getSeverityColor = (severity: string) => {
+    if (severity === 'critical') return '#dc3545';
+    if (severity === 'high') return '#ff8c00';
+    return '#6c757d';
+  };
+
+  const getSeverityBg = (severity: string) => {
+    if (severity === 'critical') return 'rgba(220, 53, 69, 0.2)';
+    if (severity === 'high') return 'rgba(255, 140, 0, 0.2)';
+    return 'rgba(108, 117, 125, 0.2)';
+  };
 
   return (
     <ScrollView 
@@ -37,9 +74,26 @@ const DashboardContent: React.FC = () => {
         styles.scrollContent,
         { paddingBottom: 20 + insets.bottom }
       ]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            loadAlerts();
+          }}
+          tintColor={theme.colors.primary}
+        />
+      }
     >
       <Text style={[styles.title, { color: theme.colors.text }]}>Dashboard</Text>
-      
+
+      {loading ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading...</Text>
+        </View>
+      ) : (
+        <>
       <View style={styles.statsContainer}>
         {stats.map((stat, index) => (
           <View key={index} style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
@@ -61,47 +115,48 @@ const DashboardContent: React.FC = () => {
           <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>View all {'->'}</Text>
         </View>
         <View style={styles.alertsList}>
-          {recentAlerts.map((alert, index) => (
-            <View key={alert.id} style={styles.alertItem}>
-              <View style={styles.timelineContainer}>
-                <View style={[
-                  styles.timelineDot,
-                  { backgroundColor: alert.severity === 'critical' ? '#dc3545' : '#ff8c00' }
-                ]} />
-                <View style={styles.timelineLine} />
-              </View>
-              <View style={styles.alertContent}>
-                <View style={styles.alertMain}>
-                  <Text style={[styles.alertTitle, { color: theme.colors.text }]}>{alert.title}</Text>
-                  <Text style={[styles.alertClient, { color: theme.colors.textSecondary }]}>{alert.client}</Text>
-                  <View style={styles.alertBadges}>
-                    <View style={[
-                      styles.severityBadge,
-                      { backgroundColor: alert.severity === 'critical' ? 'rgba(220, 53, 69, 0.2)' : 'rgba(255, 140, 0, 0.2)' }
-                    ]}>
-                      <MaterialIcons name="lock" size={10} color={alert.severity === 'critical' ? '#dc3545' : '#ff8c00'} />
-                      <Text style={[
-                        styles.severityBadgeText,
-                        { color: alert.severity === 'critical' ? '#dc3545' : '#ff8c00' }
-                      ]}>
-                        {alert.severity === 'critical' ? 'Critical' : 'High'}
-                      </Text>
-                    </View>
-                    {alert.isNew && (
-                      <View style={styles.newBadge}>
-                        <Text style={styles.newBadgeText}>New</Text>
+          {recentAlerts.length === 0 ? (
+            <Text style={[styles.emptyAlerts, { color: theme.colors.textSecondary }]}>No recent alerts</Text>
+          ) : (
+            recentAlerts.map((alert, index) => {
+              const severityColor = getSeverityColor(alert.severity);
+              const isLast = index === recentAlerts.length - 1;
+              return (
+                <View key={alert.id} style={styles.alertItem}>
+                  <View style={styles.timelineContainer}>
+                    <View style={[styles.timelineDot, { backgroundColor: severityColor }]} />
+                    {!isLast && <View style={styles.timelineLine} />}
+                  </View>
+                  <View style={styles.alertContent}>
+                    <View style={styles.alertMain}>
+                      <Text style={[styles.alertTitle, { color: theme.colors.text }]} numberOfLines={2}>{alert.message}</Text>
+                      <Text style={[styles.alertClient, { color: theme.colors.textSecondary }]}>{alert.client}</Text>
+                      <View style={styles.alertBadges}>
+                        <View style={[styles.severityBadge, { backgroundColor: getSeverityBg(alert.severity) }]}>
+                          <MaterialIcons name="lock" size={10} color={severityColor} />
+                          <Text style={[styles.severityBadgeText, { color: severityColor }]}>
+                            {alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}
+                          </Text>
+                        </View>
+                        {alert.status === 'active' && (
+                          <View style={styles.newBadge}>
+                            <Text style={styles.newBadgeText}>Active</Text>
+                          </View>
+                        )}
                       </View>
-                    )}
+                    </View>
+                    <View style={styles.alertRight}>
+                      <Text style={[styles.alertTime, { color: theme.colors.textSecondary }]}>{alert.time}</Text>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.alertRight}>
-                  <Text style={[styles.alertTime, { color: theme.colors.textSecondary }]}>{alert.time}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
+              );
+            })
+          )}
         </View>
       </View>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -117,6 +172,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 20,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyAlerts: {
+    fontSize: 14,
+    paddingVertical: 16,
   },
   statsContainer: {
     flexDirection: 'row',
