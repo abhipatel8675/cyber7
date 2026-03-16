@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: Role, companyId?: string) => Promise<void>;
+  register: (email: string, password: string, companyId: string) => Promise<void>;
   logout: () => void;
   role: Role;
   isAdmin: boolean;
@@ -82,8 +82,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [persist]);
 
   const register = useCallback(
-    async (email: string, password: string, role: Role, companyId?: string) => {
-      const { token: t, user: u } = await api.register(email, password, role, companyId);
+    async (email: string, password: string, companyId: string) => {
+      const { token: t, user: u } = await api.register(email, password, companyId);
       persist(t, { ...u, role: u.role as Role });
     },
     [persist]

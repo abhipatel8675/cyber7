@@ -18,15 +18,15 @@ router.get('/me', authMiddleware, (req, res) => {
   });
 });
 
-// POST /auth/register
+// POST /auth/register – only allows creating 'user' role (admins are created separately)
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, role = 'user', companyId } = req.body;
+    const { email, password, companyId } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-    if (role === 'user' && !companyId) {
-      return res.status(400).json({ error: 'Company ID is required for user role' });
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company is required' });
     }
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
@@ -36,8 +36,8 @@ router.post('/register', async (req, res) => {
     const user = await User.create({
       email: email.toLowerCase(),
       password: hashed,
-      role: role === 'admin' ? 'admin' : 'user',
-      companyId: role === 'user' ? (companyId || null) : null,
+      role: 'user',
+      companyId: companyId || null,
     });
     const token = jwt.sign(
       { userId: user._id.toString() },
