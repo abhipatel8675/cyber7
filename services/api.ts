@@ -59,16 +59,16 @@ export async function login(
   return data;
 }
 
+/** Register a new user (company required). Admin accounts cannot be created via registration. */
 export async function register(
   email: string,
   password: string,
-  role: 'user' | 'admin',
-  companyId?: string
+  companyId: string
 ): Promise<LoginResponse> {
   const res = await fetch(`${getBaseUrl()}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, role, companyId: companyId || undefined }),
+    body: JSON.stringify({ email, password, companyId }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

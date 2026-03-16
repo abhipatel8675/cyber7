@@ -13,7 +13,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { useAuth, type Role } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchCompanies, type Company } from '../../services/api';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -26,7 +26,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('user');
   const [companyId, setCompanyId] = useState('');
   const [selectedCompanyName, setSelectedCompanyName] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -37,14 +36,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (role !== 'user') return;
     setCompaniesLoading(true);
     setCompaniesError('');
     fetchCompanies()
       .then(setCompanies)
       .catch((err) => setCompaniesError(err instanceof Error ? err.message : 'Failed to load companies'))
       .finally(() => setCompaniesLoading(false));
-  }, [role]);
+  }, []);
 
   const handleSubmit = async () => {
     setError('');
@@ -52,13 +50,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
       setError('Email and password are required');
       return;
     }
-    if (role === 'user' && !companyId.trim()) {
+    if (!companyId.trim()) {
       setError('Please select a company');
       return;
     }
     setLoading(true);
     try {
-      await register(email.trim(), password, role, role === 'user' ? companyId.trim() : undefined);
+      await register(email.trim(), password, companyId.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -75,7 +73,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
         <View style={styles.form}>
           <Text style={[styles.title, { color: theme.colors.text }]}>Create account</Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            Register for CyberApp
+            Create a user account (select your company)
           </Text>
           <TextInput
             style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
@@ -98,41 +96,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
             autoComplete="password"
             editable={!loading}
           />
-          <View style={styles.roleRow}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Role</Text>
-            <View style={styles.roleButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.roleBtn,
-                  { backgroundColor: role === 'user' ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border },
-                ]}
-                onPress={() => setRole('user')}
-                disabled={loading}
-              >
-                <Text style={[styles.roleBtnText, { color: role === 'user' ? theme.colors.text : theme.colors.textSecondary }]}>
-                  User
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleBtn,
-                  { backgroundColor: role === 'admin' ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border },
-                ]}
-                onPress={() => {
-                  setRole('admin');
-                  setCompanyId('');
-                  setSelectedCompanyName('');
-                }}
-                disabled={loading}
-              >
-                <Text style={[styles.roleBtnText, { color: role === 'admin' ? theme.colors.text : theme.colors.textSecondary }]}>
-                  Admin
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          {role === 'user' && (
-            <View style={styles.companyRow}>
+          <View style={styles.companyRow}>
               <Text style={[styles.label, { color: theme.colors.text }]}>Company</Text>
               {companiesLoading ? (
                 <View style={[styles.dropdown, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -196,7 +160,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
                 </>
               )}
             </View>
-          )}
           {error ? (
             <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>
           ) : null}
@@ -260,24 +223,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
     fontWeight: '500',
-  },
-  roleRow: {
-    marginBottom: 12,
-  },
-  roleButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  roleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  roleBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   companyRow: {
     marginBottom: 12,
