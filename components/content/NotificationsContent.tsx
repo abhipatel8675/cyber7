@@ -1,118 +1,139 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { useTheme } from '../../theme/useTheme';
+import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+import { fetchNotifications, type AppNotification } from '../../services/api';
 
 const NotificationsContent: React.FC = () => {
   const { theme } = useTheme();
+  const { token } = useAuth();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const notifications = [
-    { 
-      id: 1, 
-      title: 'Critical Alert Resolved', 
-      message: 'Server downtime issue has been resolved',
-      time: '5 min ago',
-      type: 'success',
-      read: false
-    },
-    { 
-      id: 2, 
-      title: 'New Client Added', 
-      message: 'StartUp LLC has been added to your client list',
-      time: '1 hour ago',
-      type: 'info',
-      read: false
-    },
-    { 
-      id: 3, 
-      title: 'System Update', 
-      message: 'Security monitoring system updated to v2.1.0',
-      time: '2 hours ago',
-      type: 'info',
-      read: true
-    },
-    { 
-      id: 4, 
-      title: 'Weekly Report Available', 
-      message: 'Your weekly security report is ready for download',
-      time: '3 hours ago',
-      type: 'info',
-      read: true
-    },
-    { 
-      id: 5, 
-      title: 'Maintenance Scheduled', 
-      message: 'System maintenance scheduled for tonight at 2 AM',
-      time: '5 hours ago',
-      type: 'warning',
-      read: true
-    },
-  ];
+  const loadNotifications = useCallback(async () => {
+    if (!token) return;
+    const data = await fetchNotifications(token);
+    setNotifications(data);
+    setLoading(false);
+    setRefreshing(false);
+  }, [token]);
+
+  useEffect(() => {
+    if (token) loadNotifications();
+    else setLoading(false);
+  }, [loadNotifications, token]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadNotifications();
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'success': return theme.colors.success;
       case 'warning': return theme.colors.warning;
       case 'error': return theme.colors.error;
-      case 'info': return '#4A90E2';
-      default: return theme.colors.textSecondary;
+      default: return '#4A90E2';
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string): any => {
     switch (type) {
       case 'success': return 'check-circle';
       case 'warning': return 'warning';
       case 'error': return 'error';
-      case 'info': return 'info';
-      default: return 'notifications';
+      default: return 'info';
     }
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+          Loading notifications...
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.colors.primary}
+        />
+      }
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Notifications</Text>
-        <TouchableOpacity style={[styles.markAllButton, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.markAllText, { color: theme.colors.primary }]}>Mark all as read</Text>
+        <TouchableOpacity
+          style={[styles.refreshBtn, { backgroundColor: theme.colors.surface }]}
+          onPress={onRefresh}
+        >
+          <MaterialIcons name="refresh" size={18} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.notificationsList}>
-        {notifications.map((notification) => (
-          <TouchableOpacity key={notification.id} style={[
-            styles.notificationCard, 
-            { 
-              backgroundColor: notification.read ? theme.colors.surface : theme.colors.background,
-              borderLeftColor: getTypeColor(notification.type)
-            }
-          ]}>
-            <View style={styles.notificationHeader}>
-              <View style={styles.notificationIcon}>
-                <MaterialIcons 
-                  name={getTypeIcon(notification.type)} 
-                  size={24} 
-                  color={getTypeColor(notification.type)} 
-                />
-              </View>
-              <View style={styles.notificationMeta}>
-                <Text style={[styles.notificationTitle, { color: theme.colors.text }]}>
-                  {notification.title}
-                </Text>
-                <Text style={[styles.notificationTime, { color: theme.colors.textSecondary }]}>
-                  {notification.time}
-                </Text>
-              </View>
-              {!notification.read && (
-                <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} />
-              )}
-            </View>
-            
-            <Text style={[styles.notificationMessage, { color: theme.colors.textSecondary }]}>
-              {notification.message}
+      <View style={styles.list}>
+        {notifications.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: theme.colors.surface }]}>
+            <MaterialIcons name="notifications-none" size={48} color={theme.colors.textSecondary} />
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+              No activity yet
             </Text>
-          </TouchableOpacity>
-        ))}
+            <Text style={[styles.emptyMessage, { color: theme.colors.textSecondary }]}>
+              Alert state changes (acknowledged / resolved) will appear here.
+            </Text>
+          </View>
+        ) : (
+          notifications.map((n) => (
+            <View
+              key={n.id}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderLeftColor: getTypeColor(n.type),
+                },
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <MaterialIcons
+                  name={getTypeIcon(n.type)}
+                  size={22}
+                  color={getTypeColor(n.type)}
+                  style={styles.cardIcon}
+                />
+                <View style={styles.cardMeta}>
+                  <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+                    {n.title}
+                  </Text>
+                  <Text style={[styles.cardTime, { color: theme.colors.textSecondary }]}>
+                    {n.time}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.cardMessage, { color: theme.colors.textSecondary }]}>
+                {n.message}
+              </Text>
+            </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -121,7 +142,20 @@ const NotificationsContent: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
   },
   header: {
     flexDirection: 'row',
@@ -133,9 +167,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
-  markAllButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+  refreshBtn: {
+    padding: 8,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -143,14 +176,31 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  markAllText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  notificationsList: {
+  list: {
     flex: 1,
   },
-  notificationCard: {
+  emptyCard: {
+    borderRadius: 10,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptyMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  card: {
     borderRadius: 8,
     padding: 15,
     marginBottom: 12,
@@ -161,31 +211,27 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  notificationHeader: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  notificationIcon: {
-    marginRight: 12,
+  cardIcon: {
+    marginRight: 10,
+    marginTop: 1,
   },
-  notificationMeta: {
+  cardMeta: {
     flex: 1,
   },
-  notificationTitle: {
-    fontSize: 16,
+  cardTitle: {
+    fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
   },
-  notificationTime: {
+  cardTime: {
     fontSize: 12,
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  notificationMessage: {
+  cardMessage: {
     fontSize: 14,
     lineHeight: 20,
   },

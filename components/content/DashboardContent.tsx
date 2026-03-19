@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl }
 import { useTheme } from '../../theme/useTheme';
 import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchAlerts, type AlertTicket } from '../../services/api';
 
 const RECENT_ALERTS_LIMIT = 5;
@@ -11,7 +10,6 @@ const RECENT_ALERTS_LIMIT = 5;
 const DashboardContent: React.FC = () => {
   const { theme } = useTheme();
   const { token } = useAuth();
-  const insets = useSafeAreaInsets();
   const [alerts, setAlerts] = useState<AlertTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +35,7 @@ const DashboardContent: React.FC = () => {
   const criticalCount = alerts.filter((a) => a.severity === 'critical' && a.status === 'active').length;
   const highCount = alerts.filter((a) => a.severity === 'high' && a.status === 'active').length;
   const activeCount = alerts.filter((a) => a.status === 'active').length;
-  const resolvedCount = alerts.filter((a) => a.status === 'resolved').length;
+  const acknowledgedCount = alerts.filter((a) => a.status === 'acknowledged').length;
   const recentAlerts = alerts.slice(0, RECENT_ALERTS_LIMIT);
 
   interface StatItem {
@@ -52,7 +50,7 @@ const DashboardContent: React.FC = () => {
     { title: 'CRITICAL ALERTS', value: String(criticalCount), description: 'Unresolved', icon: 'shield-alert' as any, color: '#dc3545' },
     { title: 'HIGH ALERTS', value: String(highCount), description: 'Unresolved', icon: 'show-chart' as any, color: '#ffc107' },
     { title: 'IN PROGRESS', value: String(activeCount), description: 'Being worked', icon: 'show-chart' as any, color: '#ffc107' },
-    { title: 'ACKNOWLEDGED', value: String(resolvedCount), description: 'Total', icon: 'groups' as any, color: '#9370DB' },
+    { title: 'ACKNOWLEDGED', value: String(acknowledgedCount), description: 'Pending review', icon: 'groups' as any, color: '#9370DB' },
   ];
 
   const getSeverityColor = (severity: string) => {
@@ -70,10 +68,7 @@ const DashboardContent: React.FC = () => {
   return (
     <ScrollView 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingBottom: 20 + insets.bottom }
-      ]}
+      contentContainerStyle={styles.scrollContent}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -166,7 +161,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 10,
+    padding: 16,
+    paddingBottom: 32,
   },
   title: {
     fontSize: 28,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { MaterialIcons, Feather, Ionicons, FontAwesome5, AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { MenuItem } from '../contexts/menuItems';
@@ -10,90 +10,104 @@ interface SidebarProps {
   activeItem?: string;
   onMenuSelect?: (item: string) => void;
   menuItems: MenuItem[];
+  topInset?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem = 'Dashboard', onMenuSelect, menuItems }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  activeItem = 'Dashboard',
+  onMenuSelect,
+  menuItems,
+  topInset = 0,
+}) => {
   const { theme } = useTheme();
 
   const renderIcon = (item: any, isActive: boolean = false) => {
-    const iconProps = {
-      size: 22,
-      color: isActive ? '#4A90E2' : theme.colors.text,
-    };
-
+    const iconProps = { size: 22, color: isActive ? '#ffffff' : theme.colors.text };
     switch (item.iconType) {
-      case 'MaterialIcons':
-        return <MaterialIcons name={item.icon} {...iconProps} />;
-      case 'Feather':
-        return <Feather name={item.icon} {...iconProps} />;
-      case 'Ionicons':
-        return <Ionicons name={item.icon} {...iconProps} />;
-      case 'FontAwesome5':
-        return <FontAwesome5 name={item.icon} {...iconProps} />;
-      case 'MaterialCommunityIcons':
-        return <MaterialCommunityIcons name={item.icon} {...iconProps} />;
-      case 'AntDesign':
-        return <AntDesign name={item.icon} {...iconProps} />;
-      default:
-        return <MaterialIcons name="help" {...iconProps} />;
+      case 'MaterialIcons':       return <MaterialIcons name={item.icon} {...iconProps} />;
+      case 'Feather':             return <Feather name={item.icon} {...iconProps} />;
+      case 'Ionicons':            return <Ionicons name={item.icon} {...iconProps} />;
+      case 'FontAwesome5':        return <FontAwesome5 name={item.icon} {...iconProps} />;
+      case 'MaterialCommunityIcons': return <MaterialCommunityIcons name={item.icon} {...iconProps} />;
+      case 'AntDesign':           return <AntDesign name={item.icon} {...iconProps} />;
+      default:                    return <MaterialIcons name="help" {...iconProps} />;
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <View style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}>
+    <>
+      {/* Dim overlay — tapping it closes the sidebar */}
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+
+      {/* Sidebar panel */}
       <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
-        <View style={[styles.logoContainer, { backgroundColor: theme.colors.primary }]}>
+
+        {/* Header — grows to clear the notch */}
+        <View
+          style={[
+            styles.logoContainer,
+            {
+              backgroundColor: '#1a1f36',
+              paddingTop: topInset + 14,
+            },
+          ]}
+        >
           <View style={styles.logoContent}>
-            <MaterialIcons name="security" size={24} color="#4A90E2" />
+            <View style={styles.logoIconCircle}>
+              <MaterialIcons name="security" size={22} color="#ffffff" />
+            </View>
             <View style={styles.logoTextContainer}>
-              <Text style={[styles.logoMainText, { color: '#ffffff' }]}>SecureNotify</Text>
-              <Text style={[styles.logoSubText, { color: '#4A90E2' }]}>ALERT SYSTEM</Text>
+              <Text style={styles.logoMainText}>CyberApp</Text>
+              <Text style={styles.logoSubText}>ALERT SYSTEM</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <MaterialIcons 
-              name="close" 
-              size={20} 
-              color={theme.colors.text}
-            />
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <MaterialIcons name="close" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
         </View>
-        
-        <View style={styles.menuContainer}>
+
+        {/* Menu items */}
+        <ScrollView style={styles.menuContainer} showsVerticalScrollIndicator={false}>
           {menuItems.map((item) => {
             const isActive = item.title === activeItem;
             return (
-              <TouchableOpacity 
-                key={item.id} 
+              <TouchableOpacity
+                key={item.id}
                 style={[
-                  styles.menuItem, 
-                  { 
-                    borderBottomColor: theme.colors.border,
-                    backgroundColor: isActive ? '#4A90E2' : 'transparent',
-                  }
+                  styles.menuItem,
+                  { backgroundColor: isActive ? '#4A90E2' : 'transparent' },
                 ]}
                 onPress={() => onMenuSelect && onMenuSelect(item.title)}
+                activeOpacity={0.7}
               >
                 <View style={styles.menuIcon}>
                   {renderIcon(item, isActive)}
                 </View>
-                <Text style={[
-                  styles.menuText, 
-                  { 
-                    color: isActive ? '#ffffff' : theme.colors.text,
-                    fontWeight: isActive ? '600' : '400'
-                  }
-                ]}>
+                <Text
+                  style={[
+                    styles.menuText,
+                    {
+                      color: isActive ? '#ffffff' : theme.colors.text,
+                      fontWeight: isActive ? '600' : '400',
+                    },
+                  ]}
+                >
                   {item.title}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
-    </View>
+    </>
   );
 };
 
@@ -104,68 +118,80 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1000,
+    zIndex: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sidebar: {
     position: 'absolute',
     top: 0,
     left: 0,
     bottom: 0,
-    width: 280,
+    width: 270,
+    zIndex: 1000,
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 10,
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
   },
   logoContainer: {
-    height: 70,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(74, 144, 226, 0.2)',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   logoContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  logoIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   logoTextContainer: {
     marginLeft: 12,
   },
   logoMainText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.3,
   },
   logoSubText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
-    letterSpacing: 1,
+    color: '#4A90E2',
+    letterSpacing: 1.5,
+    marginTop: 2,
   },
   closeButton: {
-    padding: 8,
+    padding: 4,
   },
   menuContainer: {
     flex: 1,
-    paddingTop: 10,
+    paddingTop: 8,
+    paddingHorizontal: 10,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    marginHorizontal: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
     marginVertical: 2,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
+    borderRadius: 10,
   },
   menuIcon: {
-    width: 30,
+    width: 28,
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 14,
   },
   menuText: {
     fontSize: 15,

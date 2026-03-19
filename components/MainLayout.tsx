@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, StyleSheet, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -14,57 +13,71 @@ interface MainLayoutProps {
   menuItems: MenuItem[];
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Dashboard', onMenuSelect, menuItems }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({
+  children,
+  activeMenuItem = 'Dashboard',
+  onMenuSelect,
+  menuItems,
+}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
+  const toggleSidebar = () => setIsSidebarOpen((v) => !v);
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   const handleMenuSelect = (item: string) => {
-    if (onMenuSelect) {
-      onMenuSelect(item);
-    }
+    if (onMenuSelect) onMenuSelect(item);
     closeSidebar();
   };
 
   return (
-    <View style={[styles.container, { 
-      backgroundColor: theme.colors.background,
-      paddingTop: insets.top,
-      paddingBottom: insets.bottom,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-    }]}>
-      <StatusBar 
+    // Full-screen container — no inset padding here
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar
         barStyle={theme.isDark ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
-        translucent={true}
+        translucent
       />
-      <Header onToggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={closeSidebar} 
+
+      {/* Header sits at the very top, includes the status-bar space */}
+      <View
+        style={[
+          styles.headerWrapper,
+          {
+            paddingTop: insets.top,
+            backgroundColor: theme.colors.surface,
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Header onToggleSidebar={toggleSidebar} />
+      </View>
+
+      {/* Content fills the rest, respects left / right / bottom insets */}
+      <View
+        style={[
+          styles.content,
+          {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
+        {children}
+      </View>
+
+      {/* Sidebar overlay — position: absolute inside the full-screen container,
+          so it covers the status bar area too */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
         activeItem={activeMenuItem}
         onMenuSelect={handleMenuSelect}
         menuItems={menuItems}
+        topInset={insets.top}
       />
-      <View style={styles.content}>
-        {children}
-      </View>
-      
-      <TouchableOpacity style={[styles.chatButton, { 
-        backgroundColor: theme.colors.primary,
-        bottom: 20 + insets.bottom,
-      }]}>
-        <Text style={styles.chatButtonText}>Chat to Edit</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -72,33 +85,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, activeMenuItem = 'Das
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
+  },
+  headerWrapper: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1,
   },
   content: {
     flex: 1,
-    padding: 10,
-  },
-  chatButton: {
-    position: 'absolute',
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  chatButtonText: {
-    color: '#ffffff',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
   },
 });
 

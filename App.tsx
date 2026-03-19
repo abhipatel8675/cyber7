@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
 import MainLayout from './components/MainLayout';
 import { ThemeProvider } from './theme/useTheme';
 import { useTheme } from './theme/useTheme';
@@ -12,21 +12,126 @@ import ClientsContent from './components/content/ClientsContent';
 import ContactsContent from './components/content/ContactsContent';
 import NotificationsContent from './components/content/NotificationsContent';
 import SettingsContent from './components/content/SettingsContent';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { registerPushToken, fetchAlerts, type AlertTicket } from './services/api';
+import * as Notifications from 'expo-notifications';
+
+const POLL_INTERVAL_MS = 30000; // check every 30 seconds
+
+// Must be at module level — before any notification can fire
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function setupNotifications(authToken: string) {
+  if (Platform.OS === 'web') return;
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('alerts', {
+        name: 'CyberApp Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+        enableLights: true,
+        lightColor: '#dc3545',
+      });
+    }
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null);
+    if (tokenData?.data) {
+      await registerPushToken(authToken, tokenData.data, Platform.OS);
+    }
+  } catch {
+    // EAS not configured or permission denied — local notifications still work
+  }
+}
+
+async function fireOsNotification(alerts: AlertTicket[]) {
+  if (Platform.OS === 'web') return;
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return;
+
+  const critCount = alerts.filter((a) => a.severity === 'critical').length;
+  const title = critCount > 0
+    ? `⚠️ ${critCount} Critical Alert${critCount > 1 ? 's' : ''}`
+    : `🔔 ${alerts.length} New Alert${alerts.length > 1 ? 's' : ''}`;
+  const body = alerts.length === 1
+    ? alerts[0].message
+    : `${alerts.length} new alerts require your attention`;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      sound: 'default',
+      ...(Platform.OS === 'android' ? { channelId: 'alerts' } : {}),
+    },
+    trigger: null,
+  }).catch(() => {});
+}
 
 const AppContent: React.FC = () => {
   const { theme } = useTheme();
-  const { role, isAuthenticated, isLoading } = useAuth();
+  const { role, isAuthenticated, isLoading, token } = useAuth();
   const [activeMenu, setActiveMenu] = useState('Dashboard');
 
   const menuItems = getMenuItemsForRole(role);
+  const knownIdsRef = useRef<Set<number>>(new Set());
+  const isFirstPollRef = useRef(true);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // If current role can't access active menu (e.g. switched from admin to user), go to Dashboard
   useEffect(() => {
-    if (!canAccessMenu(activeMenu, role)) {
-      setActiveMenu('Dashboard');
-    }
+    if (!canAccessMenu(activeMenu, role)) setActiveMenu('Dashboard');
   }, [role, activeMenu]);
+
+  // ── Global alert polling ──────────────────────────────────────────────────
+  const pollForNewAlerts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const alerts = await fetchAlerts(token);
+      const currentIds = new Set(alerts.map((a) => a.id));
+
+      if (!isFirstPollRef.current) {
+        const newAlerts = alerts.filter((a) => !knownIdsRef.current.has(a.id));
+        if (newAlerts.length > 0) {
+          fireOsNotification(newAlerts);
+        }
+      }
+
+      knownIdsRef.current = currentIds;
+      isFirstPollRef.current = false;
+    } catch {
+      // Network error — try again next interval
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      // Clean up on logout
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      knownIdsRef.current = new Set();
+      isFirstPollRef.current = true;
+      return;
+    }
+
+    setupNotifications(token);
+
+    // Seed known IDs immediately, then poll every 30s
+    pollForNewAlerts();
+    pollTimerRef.current = setInterval(pollForNewAlerts, POLL_INTERVAL_MS);
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [isAuthenticated, token, pollForNewAlerts]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -37,37 +142,24 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthScreen />;
-  }
+  if (!isAuthenticated) return <AuthScreen />;
 
   const renderContent = () => {
     switch (activeMenu) {
-      case 'Dashboard':
-        return <DashboardContent />;
-      case 'Alerts':
-        return <AlertsContent />;
-      case 'Clients':
-        return <ClientsContent />;
-      case 'Contacts':
-        return <ContactsContent />;
-      case 'Notifications':
-        return <NotificationsContent />;
-      case 'Settings':
-        return <SettingsContent />;
-      default:
-        return <DashboardContent />;
+      case 'Dashboard':     return <DashboardContent />;
+      case 'Alerts':        return <AlertsContent />;
+      case 'Clients':       return <ClientsContent />;
+      case 'Contacts':      return <ContactsContent />;
+      case 'Notifications': return <NotificationsContent />;
+      case 'Settings':      return <SettingsContent />;
+      default:              return <DashboardContent />;
     }
-  };
-
-  const handleMenuSelect = (item: string) => {
-    setActiveMenu(item);
   };
 
   return (
     <MainLayout
       activeMenuItem={activeMenu}
-      onMenuSelect={handleMenuSelect}
+      onMenuSelect={setActiveMenu}
       menuItems={menuItems}
     >
       {renderContent()}
@@ -96,50 +188,5 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  contentCard: {
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  cardContent: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  themeInfo: {
-    marginTop: 15,
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  themeText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
   },
 });

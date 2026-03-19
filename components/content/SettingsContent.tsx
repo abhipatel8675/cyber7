@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Alert } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 
 interface SettingsItem {
   label: string;
@@ -21,6 +22,30 @@ const SettingsContent: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
+
+  const testNotification = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not supported', 'Push notifications are not available on web.');
+      return;
+    }
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission required',
+        'Please allow notifications in your device settings first.'
+      );
+      return;
+    }
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '⚠️ Test Alert — CyberApp',
+        body: 'Notifications are working correctly!',
+        sound: 'default',
+        ...(Platform.OS === 'android' ? { channelId: 'alerts' } : {}),
+      },
+      trigger: null,
+    });
+  };
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
@@ -83,7 +108,10 @@ const SettingsContent: React.FC = () => {
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.scrollContent}
+    >
       <Text style={[styles.title, { color: theme.colors.text }]}>Settings</Text>
 
       {user && (
@@ -103,6 +131,15 @@ const SettingsContent: React.FC = () => {
         </View>
       )}
       
+      {/* Test notification button */}
+      <TouchableOpacity
+        style={[styles.testNotifBtn, { backgroundColor: '#4A90E2' }]}
+        onPress={testNotification}
+      >
+        <MaterialIcons name="notifications-active" size={20} color="#fff" />
+        <Text style={styles.testNotifText}>Send Test Notification</Text>
+      </TouchableOpacity>
+
       {settingsSections.map((section, sectionIndex) => (
         <View key={sectionIndex} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
@@ -149,7 +186,10 @@ const SettingsContent: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
   },
   title: {
     fontSize: 28,
@@ -223,6 +263,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testNotifBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginBottom: 24,
+    gap: 8,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  testNotifText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
