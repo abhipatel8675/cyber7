@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
+const { checkEmailInConnectWise } = require('../lib/connectwise');
 
 const router = express.Router();
 
@@ -31,6 +32,16 @@ router.post('/register', async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
+    }
+    let emailInCW = false;
+    try {
+      emailInCW = await checkEmailInConnectWise(email.toLowerCase());
+    } catch (cwErr) {
+      console.error('ConnectWise email check failed:', cwErr.message);
+      return res.status(503).json({ error: 'Unable to verify email with ConnectWise. Please try again later.' });
+    }
+    if (!emailInCW) {
+      return res.status(403).json({ error: 'Your email is not registered in our system. Please contact your administrator.' });
     }
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({

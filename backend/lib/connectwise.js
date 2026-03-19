@@ -120,4 +120,84 @@ async function fetchCompaniesFromConnectWise() {
   return companies;
 }
 
-module.exports = { fetchTicketsFromConnectWise, fetchCompaniesFromConnectWise };
+/**
+ * Check if an email exists in ConnectWise contacts.
+ * Returns true if found, false otherwise.
+ */
+async function checkEmailInConnectWise(email) {
+  const baseUrl =
+    process.env.CW_BASE_URL ||
+    process.env.EXPO_PUBLIC_CW_BASE_URL ||
+    'https://api-na.myconnectwise.net/v4_6_release/apis/3.0';
+  const clientId =
+    process.env.CW_CLIENT_ID || process.env.EXPO_PUBLIC_CW_CLIENT_ID || '';
+  const auth = getAuthHeader();
+
+  // Try defaultEmailAddress field (supported in ConnectWise v4+)
+  const condition = encodeURIComponent(`defaultEmailAddress like "${email}"`);
+  const url = `${baseUrl}/company/contacts?conditions=${condition}&pageSize=1&fields=id`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: auth,
+      clientId,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (response.status === 400) {
+    // Field not supported on this CW instance — fetch a small page and search manually
+    const fallbackUrl = `${baseUrl}/company/contacts?pageSize=200&fields=id,defaultEmailAddress`;
+    const fallback = await fetch(fallbackUrl, {
+      headers: { Authorization: auth, clientId, 'Content-Type': 'application/json' },
+    });
+    if (!fallback.ok) {
+      const text = await fallback.text();
+      throw new Error(`ConnectWise contacts API error ${fallback.status}: ${text}`);
+    }
+    const contacts = await fallback.json();
+    return Array.isArray(contacts) &&
+      contacts.some((c) => (c.defaultEmailAddress || '').toLowerCase() === email.toLowerCase());
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ConnectWise contacts API error ${response.status}: ${text}`);
+  }
+  const contacts = await response.json();
+  return Array.isArray(contacts) && contacts.length > 0;
+}
+
+/**
+ * Resolve a ticket in ConnectWise by setting closedFlag = true.
+ */
+async function resolveTicketInConnectWise(ticketId) {
+  const baseUrl =
+    process.env.CW_BASE_URL ||
+    process.env.EXPO_PUBLIC_CW_BASE_URL ||
+    'https://api-na.myconnectwise.net/v4_6_release/apis/3.0';
+  const clientId =
+    process.env.CW_CLIENT_ID || process.env.EXPO_PUBLIC_CW_CLIENT_ID || '';
+  const auth = getAuthHeader();
+  const url = `${baseUrl}/service/tickets/${ticketId}`;
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: auth,
+      clientId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ op: 'replace', path: '/closedFlag', value: true }]),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ConnectWise PATCH error ${response.status}: ${text}`);
+  }
+  return response.json();
+}
+
+module.exports = {
+  fetchTicketsFromConnectWise,
+  fetchCompaniesFromConnectWise,
+  checkEmailInConnectWise,
+  resolveTicketInConnectWise,
+};

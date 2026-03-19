@@ -8,7 +8,10 @@ const mongoose = require('mongoose');
 
 const authRoutes = require('./routes/auth');
 const alertsRoutes = require('./routes/alerts');
+const notificationsRoutes = require('./routes/notifications');
+const clientsRoutes = require('./routes/clients');
 const { fetchCompaniesFromConnectWise } = require('./lib/connectwise');
+const { startAlertPolling } = require('./lib/alertPoller');
 
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3001;
 const MONGODB_URI =
@@ -20,6 +23,8 @@ app.use(express.json());
 
 app.use('/auth', authRoutes);
 app.use('/alerts', alertsRoutes);
+app.use('/notifications', notificationsRoutes);
+app.use('/clients', clientsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, message: 'Cyber7 API is running' });
@@ -43,12 +48,19 @@ async function start() {
     console.error('MongoDB connection error:', err);
     process.exit(1);
   }
+
   app.listen(PORT, () => {
     console.log(`Backend running at http://localhost:${PORT}`);
-    console.log('  POST /auth/register  – register');
-    console.log('  POST /auth/login    – login');
-    console.log('  GET  /alerts        – alerts (Bearer token required)');
+    console.log('  POST /auth/register          – register');
+    console.log('  POST /auth/login             – login');
+    console.log('  GET  /alerts                 – alerts (Bearer token required)');
+    console.log('  PATCH /alerts/:id/status     – acknowledge or resolve alert');
+    console.log('  GET  /notifications          – notification history');
+    console.log('  POST /notifications/token    – register push token');
   });
+
+  // Start background polling for new alerts → push notifications
+  startAlertPolling();
 }
 
 start().catch((err) => {
