@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "C7 MDR",
+    "name": "C7 MDR Alerts",
     "slug": "cyberapp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.au.cyber7.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
