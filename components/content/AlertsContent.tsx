@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +18,7 @@ import {
   type AlertTicket,
   type AlertStatus,
 } from '../../services/api';
+import AlertDetailScreen from './AlertDetailScreen';
 
 const REFRESH_INTERVAL_MS = 60000;
 
@@ -38,6 +40,7 @@ const AlertsContent: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
 
   const loadAlerts = useCallback(async () => {
     if (!token) return;
@@ -125,6 +128,21 @@ const AlertsContent: React.FC = () => {
 
   const getTabCount = (key: FilterTab) =>
     key === 'all' ? alerts.length : alerts.filter((a) => a.status === key).length;
+
+  // Show detail screen when a card is tapped
+  if (selectedTicketId !== null) {
+    return (
+      <AlertDetailScreen
+        ticketId={selectedTicketId}
+        onBack={() => setSelectedTicketId(null)}
+        onStatusChange={(id, status) => {
+          setAlerts((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, status } : a))
+          );
+        }}
+      />
+    );
+  }
 
   if (loading && alerts.length === 0) {
     return (
@@ -265,6 +283,7 @@ const AlertsContent: React.FC = () => {
               getStatusColor={getStatusColor}
               onAcknowledge={() => handleStatusAction(alert, 'acknowledge')}
               onResolve={() => handleStatusAction(alert, 'resolve')}
+              onPress={() => setSelectedTicketId(alert.id)}
             />
           ))
         )}
@@ -281,6 +300,7 @@ interface AlertCardProps {
   getStatusColor: (s: string) => string;
   onAcknowledge: () => void;
   onResolve: () => void;
+  onPress: () => void;
 }
 
 const AlertCard: React.FC<AlertCardProps> = ({
@@ -291,13 +311,12 @@ const AlertCard: React.FC<AlertCardProps> = ({
   getStatusColor,
   onAcknowledge,
   onResolve,
+  onPress,
 }) => {
-  const [expanded, setExpanded] = useState(false);
-
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.colors.surface }]}
-      onPress={() => setExpanded((v) => !v)}
+      onPress={onPress}
       activeOpacity={0.85}
     >
       {/* Card Header */}
@@ -326,27 +345,20 @@ const AlertCard: React.FC<AlertCardProps> = ({
       </View>
 
       {/* Message */}
-      <Text
-        style={[styles.cardMessage, { color: theme.colors.text }]}
-        numberOfLines={expanded ? undefined : 2}
-      >
+      <Text style={[styles.cardMessage, { color: theme.colors.text }]} numberOfLines={2}>
         {alert.message}
       </Text>
 
-      {/* Type + expand hint */}
+      {/* Type + chevron */}
       <View style={styles.cardFooter}>
         <Text style={[styles.cardType, { color: theme.colors.textSecondary }]}>
           {alert.type}
         </Text>
-        <MaterialIcons
-          name={expanded ? 'expand-less' : 'expand-more'}
-          size={18}
-          color={theme.colors.textSecondary}
-        />
+        <MaterialIcons name="chevron-right" size={18} color={theme.colors.textSecondary} />
       </View>
 
-      {/* Action Buttons (shown when expanded or always for active/acknowledged) */}
-      {(expanded || alert.status !== 'resolved') && (
+      {/* Quick action buttons on the card (for active/acknowledged) */}
+      {alert.status !== 'resolved' && (
         <View style={styles.actionRow}>
           {isUpdating ? (
             <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -373,14 +385,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
                     Resolve
                   </Text>
                 </TouchableOpacity>
-              )}
-              {alert.status === 'resolved' && (
-                <View style={styles.resolvedRow}>
-                  <MaterialIcons name="check-circle" size={16} color={theme.colors.success} />
-                  <Text style={[styles.resolvedText, { color: theme.colors.success }]}>
-                    Resolved
-                  </Text>
-                </View>
               )}
             </>
           )}
@@ -460,10 +464,12 @@ const styles = StyleSheet.create({
   },
   tabsScroll: {
     marginBottom: 16,
+    flexGrow: 0,
   },
   tabsContainer: {
     gap: 8,
     paddingRight: 8,
+    alignItems: 'center',
   },
   tab: {
     flexDirection: 'row',

@@ -11,10 +11,11 @@ import { useTheme } from '../../theme/useTheme';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginScreenProps {
+  role: 'admin' | 'employee';
   onSwitchToRegister: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ role, onSwitchToRegister }) => {
   const { theme } = useTheme();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -30,7 +31,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
     }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      const user = await login(email.trim(), password);
+      // Validate role matches portal
+      const expectedRole = role === 'admin' ? 'admin' : 'user';
+      if (user.role !== expectedRole) {
+        setError(
+          role === 'admin'
+            ? 'This account does not have admin access.'
+            : 'This account is not an employee account.'
+        );
+        return;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -38,11 +49,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
     }
   };
 
+  const isAdmin = role === 'admin';
+
   return (
     <View style={styles.form}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Welcome back</Text>
+      <Text style={[styles.title, { color: theme.colors.text }]}>
+        {isAdmin ? 'Admin Sign In' : 'Employee Sign In'}
+      </Text>
       <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-        Sign in to your CyberApp account
+        {isAdmin
+          ? 'Sign in with your admin credentials'
+          : 'Sign in to your employee account'}
       </Text>
 
       <TextInput
@@ -86,7 +103,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
       ) : null}
 
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#4A90E2', opacity: loading ? 0.7 : 1 }]}
+        style={[
+          styles.button,
+          { backgroundColor: isAdmin ? '#4A90E2' : '#34C759', opacity: loading ? 0.7 : 1 },
+        ]}
         onPress={handleSubmit}
         disabled={loading}
       >
@@ -97,11 +117,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onSwitchToRegister} disabled={loading}>
-        <Text style={[styles.link, { color: '#4A90E2' }]}>
-          Don't have an account? Register
-        </Text>
-      </TouchableOpacity>
+      {!isAdmin && (
+        <TouchableOpacity onPress={onSwitchToRegister} disabled={loading}>
+          <Text style={[styles.link, { color: '#34C759' }]}>
+            Don't have an account? Register
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

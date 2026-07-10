@@ -2,6 +2,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const PushToken = require('../models/PushToken');
 const AlertState = require('../models/AlertState');
+const { fetchTicketsFromConnectWise } = require('../lib/connectwise');
 
 const router = express.Router();
 
@@ -25,14 +26,36 @@ router.post('/token', authMiddleware, async (req, res) => {
 });
 
 // GET /notifications – recent alert activity (state changes)
+// Non-admin users see only state changes for tickets in their own company.
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const recent = await AlertState.find({})
       .sort({ updatedAt: -1 })
-      .limit(50)
+      .limit(200)
       .lean();
 
-    const notifications = recent.map((s) => ({
+    const { role, companyId } = req.user;
+    let visible = recent;
+
+    if (role !== 'admin') {
+      const userIdent = String(companyId || '').toLowerCase();
+      if (!userIdent) return res.json([]);
+      // Build ticketId → companyIdentifier map from CW tickets
+      let tickets = [];
+      try {
+        tickets = await fetchTicketsFromConnectWise();
+      } catch (err) {
+        console.error('Notifications: CW fetch failed, returning empty:', err.message);
+        return res.json([]);
+      }
+      const ticketCompany = new Map();
+      for (const t of tickets) {
+        ticketCompany.set(t.id, (t.companyIdentifier || '').toLowerCase());
+      }
+      visible = recent.filter((s) => ticketCompany.get(s.ticketId) === userIdent);
+    }
+
+    const notifications = visible.slice(0, 50).map((s) => ({
       id: s._id.toString(),
       ticketId: s.ticketId,
       state: s.state,

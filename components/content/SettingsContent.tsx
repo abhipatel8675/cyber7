@@ -4,6 +4,8 @@ import { useTheme } from '../../theme/useTheme';
 import { useAuth } from '../../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ALERT_TONE_KEY, ALERT_TONES, type AlertToneId } from '../../App';
 
 interface SettingsItem {
   label: string;
@@ -22,6 +24,20 @@ const SettingsContent: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
+  const [activeToneId, setActiveToneId] = React.useState<AlertToneId>('default');
+
+  React.useEffect(() => {
+    AsyncStorage.getItem(ALERT_TONE_KEY).then((v) => {
+      if (v && ALERT_TONES.find((t) => t.id === v)) {
+        setActiveToneId(v as AlertToneId);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const selectTone = async (id: AlertToneId) => {
+    setActiveToneId(id);
+    await AsyncStorage.setItem(ALERT_TONE_KEY, id).catch(() => {});
+  };
 
   const testNotification = async () => {
     if (Platform.OS === 'web') {
@@ -36,35 +52,28 @@ const SettingsContent: React.FC = () => {
       );
       return;
     }
+    const tone = ALERT_TONES.find((t) => t.id === activeToneId) ?? ALERT_TONES[0];
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '⚠️ Test Alert — CyberApp',
-        body: 'Notifications are working correctly!',
-        sound: 'default',
-        ...(Platform.OS === 'android' ? { channelId: 'alerts' } : {}),
+        body: `Notifications are working! Tone: ${tone.label}`,
+        sound: tone.sound === false ? false : 'default',
+        ...(Platform.OS === 'android' ? { channelId: tone.channelId } : {}),
       },
       trigger: null,
     });
   };
   const [autoRefresh, setAutoRefresh] = React.useState(true);
-  const [soundEnabled, setSoundEnabled] = React.useState(true);
 
   const settingsSections: SettingsSection[] = [
     {
       title: 'Notifications',
       items: [
-        { 
-          label: 'Push Notifications', 
-          value: notifications, 
+        {
+          label: 'Push Notifications',
+          value: notifications,
           onToggle: () => setNotifications(!notifications),
           icon: 'notifications' as any,
-          type: 'toggle'
-        },
-        { 
-          label: 'Sound Effects', 
-          value: soundEnabled, 
-          onToggle: () => setSoundEnabled(!soundEnabled),
-          icon: 'volume-up' as any,
           type: 'toggle'
         },
       ]
@@ -139,6 +148,37 @@ const SettingsContent: React.FC = () => {
         <MaterialIcons name="notifications-active" size={20} color="#fff" />
         <Text style={styles.testNotifText}>Send Test Notification</Text>
       </TouchableOpacity>
+
+      {/* Alert Tone Picker */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Alert Tone</Text>
+        <View style={[styles.sectionContent, { backgroundColor: theme.colors.surface }]}>
+          {ALERT_TONES.map((tone, idx) => {
+            const active = activeToneId === tone.id;
+            return (
+              <TouchableOpacity
+                key={tone.id}
+                style={[
+                  styles.toneItem,
+                  { borderBottomColor: theme.colors.border },
+                  idx === ALERT_TONES.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                onPress={() => selectTone(tone.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingLeft}>
+                  <MaterialIcons name={tone.icon as any} size={22} color={active ? '#4A90E2' : theme.colors.textSecondary} />
+                  <Text style={[styles.settingLabel, { color: active ? '#4A90E2' : theme.colors.text, fontWeight: active ? '600' : '400' }]}>
+                    {tone.label}
+                  </Text>
+                </View>
+                {active && <MaterialIcons name="radio-button-checked" size={22} color="#4A90E2" />}
+                {!active && <MaterialIcons name="radio-button-unchecked" size={22} color={theme.colors.textSecondary} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       {settingsSections.map((section, sectionIndex) => (
         <View key={sectionIndex} style={styles.section}>
@@ -218,6 +258,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+  },
+  toneItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
   },

@@ -40,3 +40,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase / FCM service account keys (secrets)
+credentials/
+*firebase-adminsdk*.json
+
+# Build artifacts
+*.aab
+
+# Claude agent directory
+.claude/

@@ -10,7 +10,11 @@ const authRoutes = require('./routes/auth');
 const alertsRoutes = require('./routes/alerts');
 const notificationsRoutes = require('./routes/notifications');
 const clientsRoutes = require('./routes/clients');
-const { fetchCompaniesFromConnectWise } = require('./lib/connectwise');
+const {
+  fetchCompaniesFromConnectWise,
+  fetchContactsByCompanyFromConnectWise,
+} = require('./lib/connectwise');
+const { authMiddleware } = require('./middleware/auth');
 const { startAlertPolling } = require('./lib/alertPoller');
 
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3001;
@@ -37,6 +41,22 @@ app.get('/companies', async (req, res) => {
   } catch (err) {
     console.error('Companies fetch error:', err);
     res.status(500).json({ error: err.message || 'Failed to load companies' });
+  }
+});
+
+// Admin-only: contacts for a given company identifier
+app.get('/companies/:identifier/contacts', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const identifier = req.params.identifier;
+    if (!identifier) return res.status(400).json({ error: 'Company identifier required' });
+    const contacts = await fetchContactsByCompanyFromConnectWise(identifier);
+    res.json(contacts);
+  } catch (err) {
+    console.error('Contacts fetch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load contacts' });
   }
 });
 

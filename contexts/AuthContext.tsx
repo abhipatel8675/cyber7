@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as api from '../services/api';
 
 export type Role = 'user' | 'admin';
@@ -6,6 +8,7 @@ export type Role = 'user' | 'admin';
 export interface AuthUser {
   id: string;
   email: string;
+  name: string | null;
   role: Role;
   companyId: string | null;
 }
@@ -15,8 +18,8 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, companyId: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  register: (email: string, password: string, companyId: string, companyRecId: string, name?: string) => Promise<void>;
   logout: () => void;
   role: Role;
   isAdmin: boolean;
@@ -27,10 +30,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_KEY = '@cyberapp_token';
 const USER_KEY = '@cyberapp_user';
 
-function getStored(): { token: string; user: AuthUser } | null {
+async function getStored(): Promise<{ token: string; user: AuthUser } | null> {
   try {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const userJson = localStorage.getItem(USER_KEY);
+    let token: string | null;
+    let userJson: string | null;
+
+    if (Platform.OS === 'web') {
+      token = localStorage.getItem(TOKEN_KEY);
+      userJson = localStorage.getItem(USER_KEY);
+    } else {
+      [token, userJson] = await Promise.all([
+        AsyncStorage.getItem(TOKEN_KEY),
+        AsyncStorage.getItem(USER_KEY),
+      ]);
+    }
+
     if (token && userJson) {
       const user = JSON.parse(userJson) as AuthUser;
       return { token, user };
@@ -41,14 +55,28 @@ function getStored(): { token: string; user: AuthUser } | null {
   return null;
 }
 
-function setStored(token: string | null, user: AuthUser | null) {
+async function setStored(token: string | null, user: AuthUser | null): Promise<void> {
   try {
     if (token && user) {
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (Platform.OS === 'web') {
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        await Promise.all([
+          AsyncStorage.setItem(TOKEN_KEY, token),
+          AsyncStorage.setItem(USER_KEY, JSON.stringify(user)),
+        ]);
+      }
     } else {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      } else {
+        await Promise.all([
+          AsyncStorage.removeItem(TOKEN_KEY),
+          AsyncStorage.removeItem(USER_KEY),
+        ]);
+      }
     }
   } catch {
     // ignore
@@ -64,10 +92,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const persist = useCallback((newToken: string, newUser: AuthUser) => {
+  const persist = useCallback(async (newToken: string, newUser: AuthUser) => {
     setToken(newToken);
     setUser(newUser);
-    setStored(newToken, newUser);
+    await setStored(newToken, newUser);
   }, []);
 
   const logout = useCallback(() => {
@@ -76,38 +104,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setStored(null, null);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     const { token: t, user: u } = await api.login(email, password);
-    persist(t, { ...u, role: u.role as Role });
+    const authUser: AuthUser = { ...u, role: u.role as Role };
+    await persist(t, authUser);
+    return authUser;
   }, [persist]);
 
   const register = useCallback(
-    async (email: string, password: string, companyId: string) => {
-      const { token: t, user: u } = await api.register(email, password, companyId);
-      persist(t, { ...u, role: u.role as Role });
+    async (email: string, password: string, companyId: string, companyRecId: string, name?: string) => {
+      const { token: t, user: u } = await api.register(email, password, companyId, companyRecId, name);
+      await persist(t, { ...u, role: u.role as Role });
     },
     [persist]
   );
 
   useEffect(() => {
-    const stored = getStored();
-    if (!stored) {
-      setIsLoading(false);
-      return;
-    }
-    api
-      .getMe(stored.token)
-      .then((freshUser) => {
-        setUser({ ...freshUser, role: freshUser.role as Role });
+    (async () => {
+      const stored = await getStored();
+      if (!stored) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const freshUser = await api.getMe(stored.token);
+        const authUser: AuthUser = { ...freshUser, role: freshUser.role as Role };
+        setUser(authUser);
         setToken(stored.token);
-        setStored(stored.token, { ...freshUser, role: freshUser.role as Role });
-      })
-      .catch(() => {
-        setStored(null, null);
+        await setStored(stored.token, authUser);
+      } catch {
+        await setStored(null, null);
         setToken(null);
         setUser(null);
-      })
-      .finally(() => setIsLoading(false));
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   const role: Role = user?.role ?? 'user';

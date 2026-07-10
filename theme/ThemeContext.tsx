@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme, ThemeType, lightTheme, darkTheme } from './themes';
 
 interface ThemeContextType {
@@ -32,8 +34,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const loadThemeFromStorage = async () => {
     try {
-      // For now, use localStorage simulation. In production, install AsyncStorage
-      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      let storedTheme: string | null = null;
+      if (Platform.OS === 'web') {
+        storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      } else {
+        storedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+      }
       if (storedTheme === 'dark' || storedTheme === 'light') {
         setThemeType(storedTheme);
       }
@@ -44,8 +50,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const saveThemeToStorage = async (themeToSave: ThemeType) => {
     try {
-      // For now, use localStorage simulation. In production, install AsyncStorage
-      localStorage.setItem(THEME_STORAGE_KEY, themeToSave);
+      if (Platform.OS === 'web') {
+        localStorage.setItem(THEME_STORAGE_KEY, themeToSave);
+      } else {
+        await AsyncStorage.setItem(THEME_STORAGE_KEY, themeToSave);
+      }
     } catch (error) {
       console.log('Error saving theme to storage:', error);
     }

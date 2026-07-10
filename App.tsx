@@ -15,36 +15,108 @@ import SettingsContent from './components/content/SettingsContent';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { registerPushToken, fetchAlerts, type AlertTicket } from './services/api';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+
+export const ALERT_TONE_KEY = '@cyberapp_alert_tone';
+
+export type AlertToneId = 'default' | 'urgent' | 'pulse' | 'silent';
+
+export interface AlertTone {
+  id: AlertToneId;
+  label: string;
+  icon: string;
+  vibration: number[];
+  sound: string | false;
+  channelId: string;
+}
+
+export const ALERT_TONES: AlertTone[] = [
+  {
+    id: 'default',
+    label: 'Default',
+    icon: 'volume-up',
+    vibration: [0, 250, 250, 250],
+    sound: 'default',
+    channelId: 'alerts',
+  },
+  {
+    id: 'urgent',
+    label: 'Urgent',
+    icon: 'warning',
+    vibration: [0, 100, 100, 100, 100, 100, 100, 100],
+    sound: 'default',
+    channelId: 'alerts_urgent',
+  },
+  {
+    id: 'pulse',
+    label: 'Pulse',
+    icon: 'graphic-eq',
+    vibration: [0, 600, 300, 600],
+    sound: 'default',
+    channelId: 'alerts_pulse',
+  },
+  {
+    id: 'silent',
+    label: 'Silent',
+    icon: 'volume-off',
+    vibration: [],
+    sound: false,
+    channelId: 'alerts_silent',
+  },
+];
 
 const POLL_INTERVAL_MS = 30000; // check every 30 seconds
 
 // Must be at module level — before any notification can fire
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
 
+async function getActiveTone(): Promise<AlertTone> {
+  try {
+    const stored = await AsyncStorage.getItem(ALERT_TONE_KEY);
+    const found = ALERT_TONES.find((t) => t.id === stored);
+    return found ?? ALERT_TONES[0];
+  } catch {
+    return ALERT_TONES[0];
+  }
+}
+
 async function setupNotifications(authToken: string) {
   if (Platform.OS === 'web') return;
   try {
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('alerts', {
-        name: 'CyberApp Alerts',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        sound: 'default',
-        enableLights: true,
-        lightColor: '#dc3545',
-      });
+      // Register all tone channels upfront so they're ready when needed
+      await Promise.all(
+        ALERT_TONES.map((tone) =>
+          Notifications.setNotificationChannelAsync(tone.channelId, {
+            name: `CyberApp Alerts — ${tone.label}`,
+            importance: tone.id === 'silent'
+              ? Notifications.AndroidImportance.LOW
+              : Notifications.AndroidImportance.MAX,
+            vibrationPattern: tone.vibration.length > 0 ? tone.vibration : undefined,
+            sound: tone.sound ? 'default' : null,
+            enableLights: tone.id !== 'silent',
+            lightColor: '#dc3545',
+          })
+        )
+      );
     }
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') return;
 
-    const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null);
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId,
+    }).catch(() => null);
     if (tokenData?.data) {
       await registerPushToken(authToken, tokenData.data, Platform.OS);
     }
@@ -58,6 +130,8 @@ async function fireOsNotification(alerts: AlertTicket[]) {
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') return;
 
+  const tone = await getActiveTone();
+
   const critCount = alerts.filter((a) => a.severity === 'critical').length;
   const title = critCount > 0
     ? `⚠️ ${critCount} Critical Alert${critCount > 1 ? 's' : ''}`
@@ -70,8 +144,8 @@ async function fireOsNotification(alerts: AlertTicket[]) {
     content: {
       title,
       body,
-      sound: 'default',
-      ...(Platform.OS === 'android' ? { channelId: 'alerts' } : {}),
+      sound: tone.sound === false ? false : 'default',
+      ...(Platform.OS === 'android' ? { channelId: tone.channelId } : {}),
     },
     trigger: null,
   }).catch(() => {});

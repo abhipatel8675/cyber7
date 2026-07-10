@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "442467985389",
+    "project_id": "cyber7-mdr",
+    "storage_bucket": "cyber7-mdr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:442467985389:android:24718ba94135997053a9e4",
+        "android_client_info": {
+          "package_name": "com.au.cyber7.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnlKFbSD7yvK1i1DS994e6oyDdXJxlWec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
