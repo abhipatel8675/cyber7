@@ -246,6 +246,7 @@ const styles = StyleSheet.create({
   },
   roleTextWrap: {
     flex: 1,
+    minWidth: 0,
   },
   roleTitle: {
     fontSize: 17,
