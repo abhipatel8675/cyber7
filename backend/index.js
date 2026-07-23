@@ -1,3 +1,5 @@
+console.log('BOOT_MARKER: d29d313-diagnostic-build');
+
 // Load .env: project root first, then backend folder (backend/.env overrides)
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
