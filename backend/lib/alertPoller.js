@@ -8,9 +8,32 @@ const { fetchTicketsFromConnectWise } = require('./connectwise');
 const { sendPushNotifications } = require('./notifications');
 const PushToken = require('../models/PushToken');
 const User = require('../models/User');
+const PollerState = require('../models/PollerState');
+
+const POLLER_STATE_ID = 'alertPoller';
 
 let lastAlertIds = new Set();
 let isFirstPoll = true;
+let stateLoaded = false;
+
+// Persisted in Mongo so a server restart doesn't reset lastAlertIds to empty
+// and silently swallow the next new alert into the post-restart baseline.
+async function loadPersistedState() {
+  const doc = await PollerState.findById(POLLER_STATE_ID).lean();
+  if (doc) {
+    lastAlertIds = new Set(doc.knownIds || []);
+    isFirstPoll = false; // we have real prior state — compare against it immediately
+  }
+  stateLoaded = true;
+}
+
+async function persistState(currentIds) {
+  await PollerState.findByIdAndUpdate(
+    POLLER_STATE_ID,
+    { knownIds: [...currentIds] },
+    { upsert: true }
+  ).catch((err) => console.error('PollerState persist error:', err.message));
+}
 
 async function tokensForUserIds(userIds) {
   if (!userIds.length) return [];
@@ -34,6 +57,8 @@ function buildTitleBody(alerts) {
 
 async function pollAlerts() {
   try {
+    if (!stateLoaded) await loadPersistedState();
+
     const alerts = await fetchTicketsFromConnectWise();
     const currentIds = new Set(alerts.map((a) => a.id));
 
@@ -84,6 +109,7 @@ async function pollAlerts() {
 
     lastAlertIds = currentIds;
     isFirstPoll = false;
+    await persistState(currentIds);
   } catch (err) {
     console.error('Alert polling error:', err.message);
   }
