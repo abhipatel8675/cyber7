@@ -71,7 +71,8 @@ const POLL_INTERVAL_MS = 30000; // check every 30 seconds
 // Must be at module level — before any notification can fire
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
