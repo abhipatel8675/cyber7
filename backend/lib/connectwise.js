@@ -70,6 +70,7 @@ async function fetchTicketsFromConnectWise() {
       clientId,
       'Content-Type': 'application/json',
     },
+    signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) {
     const text = await response.text();
