@@ -41,5 +41,12 @@ yarn-error.*
 /ios
 /android
 
-# secrets
-/credentials
+# Firebase / FCM service account keys (secrets)
+credentials/
+*firebase-adminsdk*.json
+
+# Build artifacts
+*.aab
+
+# Claude agent directory
+.claude/

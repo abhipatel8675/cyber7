@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
-const { checkEmailInConnectWise } = require('../lib/connectwise');
+const { verifyCompanyByIdAndRecId, verifyEmailInCompany } = require('../lib/connectwise');
 
 const router = express.Router();
 
@@ -13,6 +13,7 @@ router.get('/me', authMiddleware, (req, res) => {
     user: {
       id: req.user._id.toString(),
       email: req.user.email,
+      name: req.user.name || null,
       role: req.user.role,
       companyId: req.user.companyId || null,
     },
@@ -22,33 +23,54 @@ router.get('/me', authMiddleware, (req, res) => {
 // POST /auth/register – only allows creating 'user' role (admins are created separately)
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, companyId } = req.body;
+    const { email, password, companyId, companyRecId, name } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-    if (!companyId) {
-      return res.status(400).json({ error: 'Company is required' });
+    if (!companyId || !companyRecId) {
+      return res.status(400).json({ error: 'Company ID and Company RecID are required' });
     }
+
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
-    let emailInCW = false;
+
+    // Verify the Company ID + RecID pair matches a real ConnectWise company.
+    // Admin distributes these values out-of-band — prevents enumeration of companies.
+    let resolvedIdentifier = null;
     try {
-      emailInCW = await checkEmailInConnectWise(email.toLowerCase());
+      resolvedIdentifier = await verifyCompanyByIdAndRecId(companyId.trim(), companyRecId);
     } catch (cwErr) {
-      console.error('ConnectWise email check failed:', cwErr.message);
-      return res.status(503).json({ error: 'Unable to verify email with ConnectWise. Please try again later.' });
+      console.error('CW company verification failed:', cwErr.message);
+      return res.status(502).json({ error: 'Could not verify company. Try again.' });
     }
-    if (!emailInCW) {
-      return res.status(403).json({ error: 'Your email is not registered in our system. Please contact your administrator.' });
+    if (!resolvedIdentifier) {
+      return res.status(403).json({ error: 'Invalid Company ID or Company RecID.' });
     }
+
+    // Verify the email belongs to a contact within that ConnectWise company.
+    let belongsToCompany = false;
+    try {
+      belongsToCompany = await verifyEmailInCompany(email.toLowerCase(), resolvedIdentifier);
+    } catch (cwErr) {
+      console.error('CW email verification failed:', cwErr.message);
+      return res.status(502).json({ error: 'Could not verify company membership. Try again.' });
+    }
+    if (!belongsToCompany) {
+      return res.status(403).json({
+        error: 'This email is not registered as a contact in the specified company.',
+      });
+    }
+
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({
       email: email.toLowerCase(),
       password: hashed,
+      name: name ? name.trim() : null,
       role: 'user',
-      companyId: companyId || null,
+      companyId: resolvedIdentifier,
+      companyRecId: Number(companyRecId),
     });
     const token = jwt.sign(
       { userId: user._id.toString() },
@@ -60,6 +82,7 @@ router.post('/register', async (req, res) => {
       user: {
         id: user._id.toString(),
         email: user.email,
+        name: user.name || null,
         role: user.role,
         companyId: user.companyId || null,
       },
@@ -95,6 +118,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user._id.toString(),
         email: user.email,
+        name: user.name || null,
         role: user.role,
         companyId: user.companyId || null,
       },

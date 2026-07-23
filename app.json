@@ -17,7 +17,10 @@
       "bundleIdentifier": "com.au.cyber7.app",
       "buildNumber": "4",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -26,7 +29,8 @@
         "backgroundColor": "#000000"
       },
       "package": "com.au.cyber7.app",
-      "versionCode": 2,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 3,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -46,9 +50,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "e207be08-e40b-48ca-9199-c4b2894cd500"
+        "projectId": "27df574e-fcca-44cb-8251-cc5496f7a2d9"
       }
     },
-    "owner": "abhipatel8675"
+    "owner": "abhipatel1369"
   }
 }

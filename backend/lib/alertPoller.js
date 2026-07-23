@@ -1,13 +1,36 @@
 /**
  * Background job: polls ConnectWise every 60 seconds for new alerts.
- * When new tickets appear, sends push notifications to all registered devices.
+ * When new tickets appear, pushes notifications scoped per company:
+ *  - Users in the alert's company receive their company's alerts only.
+ *  - Admins receive all alerts.
  */
 const { fetchTicketsFromConnectWise } = require('./connectwise');
 const { sendPushNotifications } = require('./notifications');
 const PushToken = require('../models/PushToken');
+const User = require('../models/User');
 
 let lastAlertIds = new Set();
 let isFirstPoll = true;
+
+async function tokensForUserIds(userIds) {
+  if (!userIds.length) return [];
+  const ids = userIds.map((id) => String(id));
+  const rows = await PushToken.find({ userId: { $in: ids } }).lean();
+  return rows.map((r) => r.token).filter(Boolean);
+}
+
+function buildTitleBody(alerts) {
+  const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
+  const title =
+    criticalCount > 0
+      ? `${criticalCount} Critical Alert${criticalCount > 1 ? 's' : ''}`
+      : `${alerts.length} New Alert${alerts.length > 1 ? 's' : ''}`;
+  const body =
+    alerts.length === 1
+      ? alerts[0].message
+      : `${alerts.length} new alerts require attention`;
+  return { title, body };
+}
 
 async function pollAlerts() {
   try {
@@ -15,22 +38,47 @@ async function pollAlerts() {
     const currentIds = new Set(alerts.map((a) => a.id));
 
     if (!isFirstPoll) {
-      const newAlerts = alerts.filter((a) => !lastAlertIds.has(a.id));
+      const newAlerts = alerts.filter(
+        (a) => !lastAlertIds.has(a.id) && (a.severity === 'critical' || a.severity === 'high')
+      );
       if (newAlerts.length > 0) {
-        const tokens = await PushToken.find({});
-        const tokenStrings = tokens.map((t) => t.token);
+        // Group new alerts by companyIdentifier
+        const byCompany = new Map();
+        for (const a of newAlerts) {
+          const key = (a.companyIdentifier || '').toLowerCase();
+          if (!byCompany.has(key)) byCompany.set(key, []);
+          byCompany.get(key).push(a);
+        }
 
-        const criticalCount = newAlerts.filter((a) => a.severity === 'critical').length;
-        const title =
-          criticalCount > 0
-            ? `${criticalCount} Critical Alert${criticalCount > 1 ? 's' : ''}`
-            : `${newAlerts.length} New Alert${newAlerts.length > 1 ? 's' : ''}`;
-        const body =
-          newAlerts.length === 1
-            ? newAlerts[0].message
-            : `${newAlerts.length} new alerts require attention`;
+        // Pre-fetch admins (always notified)
+        const admins = await User.find({ role: 'admin' }).select('_id').lean();
+        const adminIds = admins.map((u) => u._id.toString());
 
-        await sendPushNotifications(tokenStrings, title, body, { type: 'new_alerts' });
+        for (const [companyIdent, group] of byCompany) {
+          const recipientIds = new Set(adminIds);
+
+          if (companyIdent) {
+            // Case-insensitive match on user.companyId
+            const escaped = companyIdent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const users = await User.find({
+              role: 'user',
+              companyId: { $regex: `^${escaped}$`, $options: 'i' },
+            })
+              .select('_id')
+              .lean();
+            for (const u of users) recipientIds.add(u._id.toString());
+          }
+
+          if (recipientIds.size === 0) continue;
+          const tokens = await tokensForUserIds([...recipientIds]);
+          if (tokens.length === 0) continue;
+
+          const { title, body } = buildTitleBody(group);
+          await sendPushNotifications(tokens, title, body, {
+            type: 'new_alerts',
+            company: companyIdent,
+          });
+        }
       }
     }
 

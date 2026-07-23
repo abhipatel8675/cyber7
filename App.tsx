@@ -15,8 +15,8 @@ import SettingsContent from './components/content/SettingsContent';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { registerPushToken, fetchAlerts, type AlertTicket } from './services/api';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 export const ALERT_TONE_KEY = '@cyberapp_alert_tone';
 
@@ -71,8 +71,7 @@ const POLL_INTERVAL_MS = 30000; // check every 30 seconds
 // Must be at module level — before any notification can fire
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -111,7 +110,9 @@ async function setupNotifications(authToken: string) {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') return;
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
     if (!projectId) {
       console.warn('setupNotifications: missing EAS projectId — cannot register for remote push');
       return;

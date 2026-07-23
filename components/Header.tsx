@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
@@ -18,10 +18,27 @@ function avatarColor(email: string) {
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { theme, toggleTheme } = useTheme();
-  const { role, user } = useAuth();
+  const { role, user, logout } = useAuth();
 
   const initial = user?.email ? user.email[0].toUpperCase() : '?';
   const bgColor = user?.email ? avatarColor(user.email) : '#4A90E2';
+
+  const handleAvatarPress = () => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Sign out ${user?.email || ''}?`)) {
+        logout();
+      }
+      return;
+    }
+    Alert.alert(
+      'Sign out',
+      user?.email ? `Sign out ${user.email}?` : 'Sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign out', style: 'destructive', onPress: () => logout() },
+      ]
+    );
+  };
 
   return (
     <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
@@ -44,10 +61,14 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           />
         </TouchableOpacity>
 
-        {/* User avatar — initials with a consistent color based on email */}
-        <View style={[styles.avatar, { backgroundColor: bgColor }]}>
+        {/* User avatar — tap to sign out */}
+        <TouchableOpacity
+          onPress={handleAvatarPress}
+          style={[styles.avatar, { backgroundColor: bgColor }]}
+          accessibilityLabel="Sign out"
+        >
           <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
