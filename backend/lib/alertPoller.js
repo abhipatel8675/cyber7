@@ -12,6 +12,13 @@ const PollerState = require('../models/PollerState');
 
 const POLLER_STATE_ID = 'alertPoller';
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
 let lastAlertIds = new Set();
 let isFirstPoll = true;
 let stateLoaded = false;
@@ -19,7 +26,7 @@ let stateLoaded = false;
 // Persisted in Mongo so a server restart doesn't reset lastAlertIds to empty
 // and silently swallow the next new alert into the post-restart baseline.
 async function loadPersistedState() {
-  const doc = await PollerState.findById(POLLER_STATE_ID).lean();
+  const doc = await PollerState.findById(POLLER_STATE_ID).maxTimeMS(10000).lean();
   if (doc) {
     lastAlertIds = new Set(doc.knownIds || []);
     isFirstPoll = false; // we have real prior state — compare against it immediately
@@ -57,9 +64,14 @@ function buildTitleBody(alerts) {
 
 async function pollAlerts() {
   try {
-    if (!stateLoaded) await loadPersistedState();
+    console.log('pollAlerts: cycle start');
+    if (!stateLoaded) {
+      await withTimeout(loadPersistedState(), 12000, 'loadPersistedState');
+      console.log('pollAlerts: loaded persisted state,', lastAlertIds.size, 'known ids');
+    }
 
-    const alerts = await fetchTicketsFromConnectWise();
+    const alerts = await withTimeout(fetchTicketsFromConnectWise(), 18000, 'fetchTicketsFromConnectWise');
+    console.log('pollAlerts: fetched', alerts.length, 'tickets from ConnectWise');
     const currentIds = new Set(alerts.map((a) => a.id));
 
     if (!isFirstPoll) {
@@ -109,7 +121,8 @@ async function pollAlerts() {
 
     lastAlertIds = currentIds;
     isFirstPoll = false;
-    await persistState(currentIds);
+    await withTimeout(persistState(currentIds), 10000, 'persistState');
+    console.log('pollAlerts: cycle complete');
   } catch (err) {
     console.error('Alert polling error:', err.message);
   }
